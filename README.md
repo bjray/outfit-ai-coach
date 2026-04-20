@@ -281,6 +281,12 @@ functional rotator cuff tear. I climb 2x/week and have access to a gym
 with machines, dumbbells, and a treadmill.
 ```
 
+## License
+
+Licensed under the [MIT License](LICENSE). This covers the original code, skills, schemas, and prompts in this repository.
+
+Protocol files in `protocols/` synthesize third-party training methodologies (e.g. Uphill Athlete) and cite their sources inline. The MIT License does **not** extend to those third-party works — copyright in the underlying books, articles, and methodologies remains with their original authors.
+
 ## Design Principles
 
 - **Stateless per invocation.** No persistent user state. You provide context each time (or the training-context agent pulls it from your data sources).
