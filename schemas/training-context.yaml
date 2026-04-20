@@ -1,0 +1,108 @@
+# Training Context Schema
+# Produced by the training-context agent.
+# Consumed by all workout skills as optional enrichment input.
+# The orchestrator passes this context into skills when available.
+
+training_context:
+
+  # Who is asking — baseline info for the session
+  athlete_summary:
+    experience_level: string          # beginner | intermediate | advanced
+    primary_sport: string | null      # e.g., trail-running, mountaineering
+    active_injuries: string[]         # e.g., ["ACL rehab - early phase", "rotator cuff tear - functional"]
+    equipment_available: string[]     # e.g., ["seated machines", "easy bands", "treadmill"]
+    training_age_years: number | null # how long they've been training consistently
+
+  # What they've been doing — recent training window
+  recent_activity:
+    window_days: number               # how far back this summary covers (e.g., 7, 14, 28)
+    total_sessions: number
+    total_duration_minutes: number
+    total_volume_load: number | null   # sets x reps x weight, if applicable
+    total_vertical_gain_meters: number | null
+    total_distance_km: number | null
+
+    sessions:                          # last N sessions, most recent first
+      - date: string                   # ISO date
+        type: string                   # strength | cardio | sport-specific | mobility | rest
+        source: string                 # strava | garmin | trainingpeaks | oneten | manual
+        name: string                   # e.g., "Upper Body Strength", "Zone 2 Run"
+        duration_minutes: number
+        intensity: string              # easy | moderate | hard | max
+        muscle_groups_worked: string[] # e.g., ["chest", "back", "biceps"]
+        movement_patterns: string[]    # e.g., ["horizontal-push", "horizontal-pull", "hinge"]
+        heart_rate_avg: number | null
+        heart_rate_zone: number | null # 1-4
+        notes: string | null
+
+    # Frequency analysis
+    pattern_frequency:                 # how often each pattern/group was hit in the window
+      movement_patterns:
+        horizontal_push: number
+        horizontal_pull: number
+        vertical_push: number
+        vertical_pull: number
+        squat: number
+        hinge: number
+        carry: number
+        core: number
+      muscle_groups:                   # optional finer grain
+        chest: number
+        back: number
+        shoulders: number
+        biceps: number
+        triceps: number
+        quads: number
+        hamstrings: number
+        glutes: number
+        calves: number
+        core: number
+
+  # Training load assessment
+  load_assessment:
+    model: string                      # impulse-response | TRIMP | TSS | RPE-based | hrTSS
+    acute_load: number                 # ATL — last 7 days
+    chronic_load: number               # CTL — last 28-42 days
+    training_stress_balance: number    # TSB = CTL - ATL (positive = fresh, negative = fatigued)
+    fatigue_status: string             # fresh | recovering | neutral | fatigued | overtrained
+    readiness_score: number | null     # 0-100 if available from source (Garmin, etc.)
+    resting_hr_trend: string | null    # stable | rising | falling
+    hrv_trend: string | null           # stable | rising | falling
+    recommendation: string             # e.g., "Ready for a hard session" or "Consider a recovery day"
+
+  # Progression tracking
+  progression:
+    window_weeks: number               # how many weeks of progression data (e.g., 4, 8, 12)
+    strength_trends:
+      - exercise: string               # e.g., "Bench Press"
+        metric: string                 # e.g., "estimated 1RM", "working weight", "reps at weight"
+        values:                        # chronological data points
+          - week: number
+            value: number
+        trend: string                  # progressing | plateau | regressing
+    endurance_trends:
+      - metric: string                 # e.g., "zone 2 pace", "weekly volume hours", "vertical gain"
+        values:
+          - week: number
+            value: number
+        trend: string                  # progressing | plateau | regressing
+    body_composition:                  # if available
+      weight_trend: string | null      # stable | gaining | losing
+      notes: string | null
+
+  # Gap analysis — what's missing or undertrained
+  gap_analysis:
+    undertrained_patterns: string[]    # movement patterns not hit enough in recent window
+    undertrained_muscles: string[]     # muscle groups below target frequency
+    missing_energy_systems: string[]   # e.g., ["zone 2 - only 1 session this week, target is 3"]
+    overdue_deload: boolean            # true if load suggests a deload is needed
+    staleness_risk: string[]           # areas where progression has stalled
+    recommendations: string[]          # actionable suggestions
+
+  # Metadata
+  metadata:
+    generated_date: string             # ISO datetime
+    data_sources: string[]             # which sources contributed
+    data_quality: string               # complete | partial | sparse
+    confidence: string                 # high | medium | low
+    gaps_in_data: string[]             # e.g., ["no HR data for 3 of 7 sessions"]

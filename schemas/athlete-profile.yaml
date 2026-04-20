@@ -1,0 +1,108 @@
+# Athlete Profile Schema
+#
+# Long-lived, manually maintained profile describing the athlete's fixed
+# preferences and goals. Distinct from `training-context.yaml`, which is
+# a per-session data-derived snapshot.
+#
+# The orchestrator reads `profiles/default.yaml` (or a user-specified
+# profile) at the start of every session and passes it as `athlete_profile`
+# to every skill invocation.
+#
+# Profile + training_context together answer:
+#   - profile: "who I am, what I want, what I have"
+#   - training_context: "what I've been doing recently, how I'm recovering"
+
+athlete_profile:
+
+  # ─── Identity ──────────────────────────────────────────────────────────
+
+  name: string                          # display name; not PII-required
+  created: string                       # ISO date
+  updated: string                       # ISO date — keep current
+
+  # ─── Training background ───────────────────────────────────────────────
+
+  experience_level: string              # beginner | intermediate | advanced
+  training_age_years: number            # how long they've trained consistently
+
+  # ─── Goals ─────────────────────────────────────────────────────────────
+
+  goals:
+    primary: string                     # hypertrophy | strength | endurance
+                                        #   | sport-performance | general-fitness
+                                        #   | weight-loss | rehab
+    secondary: string[]                 # optional — ranked
+
+    # Specific targets if applicable
+    event:                              # if training for an event
+      name: string | null               # e.g., "Leadville 100 MTB"
+      date: string | null               # ISO date
+      description: string | null
+
+  # ─── Body-part emphasis ────────────────────────────────────────────────
+
+  body_part_emphasis: string[]          # lagging / prioritized parts
+                                        # e.g., ["chest", "back"]
+  body_part_maintenance: string[]       # keep-alive only — minimal volume
+                                        # e.g., ["calves"]
+
+  # ─── Session preferences ───────────────────────────────────────────────
+
+  session_preferences:
+    typical_duration_minutes: number    # realistic time they'll actually
+                                        # have, not the ideal
+    hard_cap_minutes: number            # absolute max — skills must not
+                                        # exceed this
+    days_per_week: number               # 1–7
+    preferred_days: string[]            # ["Mon", "Wed", "Fri"]
+    preferred_times_of_day: string[]    # ["morning", "evening"]
+
+  # ─── Physiology ────────────────────────────────────────────────────────
+
+  volume_tolerance: string              # low | moderate | high
+                                        #   — low: stay at lower end of
+                                        #     weekly-set ranges in guidelines
+                                        #   — high: upper end
+  recovery_quality: string              # poor | average | good
+                                        #   — poor: longer between sessions,
+                                        #     more deloads
+                                        #   — good: can sustain high frequency
+
+  # ─── Equipment & environment ───────────────────────────────────────────
+
+  equipment_available: string[]         # e.g., ["full commercial gym",
+                                        #        "barbell", "dumbbells to 50lb",
+                                        #        "bands", "pull-up bar"]
+  training_environment: string | null   # "gym" | "home" | "hybrid" | etc.
+
+  # ─── Preferences & constraints ─────────────────────────────────────────
+
+  known_preferences:                    # free-form guidance the coach
+                                        # should respect
+    - string                            # e.g., "hates barbell lunges",
+                                        #       "loves cable work",
+                                        #       "will skip sessions > 60 min"
+
+  active_injuries:                      # same shape as training-context
+    - name: string                      # e.g., "Left ACL — early rehab"
+      phase: string                     # acute | early-rehab | late-rehab
+                                        #   | return-to-sport
+      restrictions: string[]            # e.g., ["no standing lifts",
+                                        #        "left leg unloaded"]
+      cleared_by_provider: boolean
+      notes: string | null
+
+  # ─── Loads & baselines (for strength) ──────────────────────────────────
+  # Optional — if present, strength skills use these as a baseline
+  # rather than asking. Update as the athlete progresses.
+
+  working_weights:
+    - exercise: string                  # e.g., "Bench Press"
+      weight: number
+      unit: string                      # lbs | kg
+      for_reps: number                  # e.g., "5 reps at this weight"
+      updated: string                   # ISO date
+
+  # ─── Free-form notes ───────────────────────────────────────────────────
+
+  notes: string                         # anything else the coach should know

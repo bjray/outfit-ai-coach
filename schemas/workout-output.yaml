@@ -1,0 +1,144 @@
+# Workout Output Schema (v0.1 — blocks model)
+#
+# All skills produce output conforming to this structure.
+# Canonical form is YAML; the orchestrator renders this as human-readable markdown.
+#
+# This schema follows the Workout Template Spec v0.1 — see schemas/workout-template-v0.1.md
+# for the full specification, grammar, and worked examples.
+#
+# Core model:
+#   workout = header + ordered list of blocks
+#   block   = name + rounds + list of exercises
+#   total reps per exercise = block.rounds × exercise.sets × exercise.reps
+#
+# Sections like "warmup", "main", "accessories", "cooldown" are NOT fixed fields —
+# they are simply blocks named "Warmup", "Main", "Cooldown", etc.
+
+# ─── Workout (single session) ────────────────────────────────────────────────
+
+workout:
+  id: string                        # required — e.g., "Day 1", "SESSION 3", 1
+  name: string | null               # optional display name
+  objective: string                 # required — short phrase; what the workout is for
+  blocks:                           # required — ordered list
+    - <Block>                       # see Block shape below
+  notes: string | null              # workout-level prose
+
+  # ─── Supplementary metadata (not part of the v0.1 spec, but useful for this project) ───
+  type: string | null               # strength | cardio | mobility | sport-specific | hybrid
+  goal: string | null               # hypertrophy, strength, endurance, sport-performance, etc.
+  date: string | null               # ISO date if scheduled
+  duration_minutes: number | null   # estimated total session time
+  difficulty: string | null         # easy | moderate | hard | max-effort
+  injury_modifications:             # populated by injury-adapter skill
+    - original_exercise: string
+      replacement_exercise: string
+      reason: string
+
+# ─── Block ───────────────────────────────────────────────────────────────────
+#
+# A block is either a `work` block (has exercises) or a `rest` block
+# (has duration + unit, no exercises).
+
+Block:
+  name: string                      # required — "Warmup", "Main", "Round 1", "(1)", etc.
+  theme: string | null              # e.g., "Pull & Push", "Core & Grip"
+  type: string | null               # work | rest — default "work"
+  rounds: number | [number, number] # default 1; a range means "2–3 based on feel"
+  setup: string | null              # one-time instructions before the loop
+  instructions: string | null       # execution guidance for the block
+  references: string[] | null       # list of URLs
+  defaults: object | null           # fields inherited by exercises (tempo, rest_after, load, intensity, ...)
+  rest_between_rounds: Duration | null    # rest between cycles
+  rest_between_exercises: Duration | null # for sequential-style blocks
+  exercises:                        # required unless type: rest
+    - <Exercise>                    # see Exercise shape below
+  notes: string | null
+
+  # When type: rest, the block omits `exercises` and takes these directly:
+  duration: number | null
+  unit: string | null               # s | min
+
+# ─── Exercise ────────────────────────────────────────────────────────────────
+#
+# An exercise is ONE OF: reps-based, duration-based, or prose-only.
+# `name` is required unless `prose` is used. Must specify a quantity — reps, duration, or prose.
+
+Exercise:
+  name: string                      # required unless `prose`
+  prose: string | null              # free-text exercise; mutually exclusive with name/reps/duration
+  sets: number | null               # default 1 — consecutive repeats of this exercise before moving on
+  reps: number | [number, number] | null       # reps per set
+  duration: number | null           # time-based
+  unit: string | null               # s | min — required when `duration` is set
+  positions: number | null          # multi-pose holds (duration applies per position)
+  per_side: boolean | null          # asymmetric moves; equivalent to positions: 2
+  load: Load | null                 # held/lifted weight
+  worn_load: WornLoad | null        # pack, vest, belt
+  equipment: string | null          # box height, band tension, free-text spec
+  tempo: string | object | null     # "1 rep / 1–2 s" or {eccentric, pause, concentric, unit}
+  intensity: string | null          # "easy", "rep-max", "RPE 8", "Zone 2"
+  modifier: string | null           # "for time", "AMRAP", "EMOM"
+  protocol: string | null           # "10s on / 50s off"
+  references: string[] | null       # list of URLs
+  rest_after: Duration | null       # rest after this exercise
+  notes: string | null              # coach's notes
+  substitutions: string[] | null    # alternative exercises if equipment unavailable
+
+# ─── Shared types ────────────────────────────────────────────────────────────
+
+Duration:
+  duration: number
+  unit: string                      # s | min
+
+Load:
+  value: number
+  unit: string                      # lbs | kg
+
+WornLoad:
+  value: number
+  unit: string                      # lbs | kg
+  type: string                      # pack | vest | belt
+
+# ─── Validation rules ────────────────────────────────────────────────────────
+#
+# • Workout: `id` and `objective` required.
+# • Block:   `name` required; `exercises` required unless `type: rest`.
+# • Exercise: must specify a quantity — `reps`, `duration`, or `prose`.
+# • `unit` required when `duration` is set.
+# • `per_side` and `positions` are aliases; use whichever reads better.
+
+# ─── Program (multi-week container) ──────────────────────────────────────────
+#
+# Note: the v0.1 spec explicitly defers a program container to a future version.
+# Until v0.2 lands, this project uses the following program shape, with each
+# session holding a v0.1-compliant workout.
+
+program:
+  name: string
+  duration_weeks: number
+  periodization_model: string       # linear | undulating | block
+  phases:
+    - name: string                  # e.g., "Base", "Build", "Peak", "Deload"
+      weeks: string                 # e.g., "1-4"
+      focus: string
+      volume: string                # low | moderate | high
+      intensity: string             # low | moderate | high | max
+  weeks:
+    - week_number: number
+      phase: string
+      sessions:
+        - day: number | string
+          workout: <Workout>        # a full v0.1 workout as described above
+  progression_rules:
+    - string                        # e.g., "Add 5 lbs when all sets completed at target reps"
+  deload_strategy: string
+
+# ─── Metadata ────────────────────────────────────────────────────────────────
+
+metadata:
+  protocol_used: string | null      # name of protocol file if applicable
+  sport: string | null
+  injuries_considered: string[]
+  generated_date: string            # ISO date
+  disclaimer: string | null         # medical/safety disclaimers

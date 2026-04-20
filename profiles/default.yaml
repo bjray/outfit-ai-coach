@@ -1,0 +1,91 @@
+# Default athlete profile
+#
+# Edit in place. The workout-coach orchestrator reads this at the start of
+# every session. See `schemas/athlete-profile.yaml` for the full field
+# reference.
+#
+# To use a different profile per session, pass `profile: <filename>` to
+# the orchestrator or create `profiles/<name>.yaml` and reference it.
+
+athlete_profile:
+
+  name: "Default Athlete"
+  created: "2026-04-19"
+  updated: "2026-04-19"
+
+  # ─── Training background ───────────────────────────────────────────────
+
+  experience_level: intermediate        # beginner | intermediate | advanced
+  training_age_years: 6
+
+  # ─── Goals ─────────────────────────────────────────────────────────────
+
+  goals:
+    primary: hypertrophy                # hypertrophy | strength | endurance
+                                        #   | sport-performance
+                                        #   | general-fitness | weight-loss
+                                        #   | rehab
+    secondary:
+      - general-fitness
+    event:
+      name: null
+      date: null
+      description: null
+
+  # ─── Body-part emphasis ────────────────────────────────────────────────
+
+  body_part_emphasis:                   # lagging parts — prioritize volume
+    - chest
+    - back
+  body_part_maintenance:                # keep-alive only — minimal volume
+    - calves
+
+  # ─── Session preferences ───────────────────────────────────────────────
+
+  session_preferences:
+    typical_duration_minutes: 60        # realistic time, not ideal
+    hard_cap_minutes: 75                # absolute max
+    days_per_week: 4
+    preferred_days:
+      - Mon
+      - Tue
+      - Thu
+      - Fri
+    preferred_times_of_day:
+      - morning
+
+  # ─── Physiology ────────────────────────────────────────────────────────
+
+  volume_tolerance: moderate            # low | moderate | high
+  recovery_quality: average             # poor | average | good
+
+  # ─── Equipment & environment ───────────────────────────────────────────
+
+  equipment_available:
+    - full commercial gym
+    - barbell
+    - dumbbells to 100 lb
+    - cables
+    - bands
+    - pull-up bar
+    - treadmill
+    - rower
+  training_environment: gym
+
+  # ─── Preferences & constraints ─────────────────────────────────────────
+
+  known_preferences:
+    - prefers compound lifts over isolation
+    - will skip sessions that run over 70 min
+    - dislikes standing barbell overhead press
+    - enjoys cable and machine work for accessories
+
+  active_injuries: []
+
+  # ─── Loads & baselines ─────────────────────────────────────────────────
+
+  working_weights: []
+
+  # ─── Free-form notes ───────────────────────────────────────────────────
+
+  notes: ""

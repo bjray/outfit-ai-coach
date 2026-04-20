@@ -1,0 +1,25 @@
+# macOS
+.DS_Store
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python (in case of tooling scripts)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# User-specific content
+inbox/
+profiles/*
+!profiles/default.yaml
+programs/*
+
