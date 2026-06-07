@@ -22,19 +22,33 @@ Read these from the skills directory when needed:
 
 1. **strength-trainer** — Strength/resistance workouts for hypertrophy, strength, endurance, weight loss
 2. **sport-trainer** — Sport-specific training (climbing, trail running, hiking, mountaineering, cycling, skiing)
-3. **program-builder** — Multi-week periodized programs with progression
+3. **program-builder** — Macro structure for multi-week programs: phase plan, per-phase specs, progression, deloads. Does **not** pick exercises — it specs phases for the trainers to fill, then progresses the filled sessions (see the skeleton-first handoff in Step 3)
 4. **injury-adapter** — Workout modifications for injuries
 5. **protocol-engine** — Named training protocols from `protocols/` directory
+6. **garmin-training** — User-triggered ingestion of Garmin Connect data into `fitness-data/` CSVs. Do **not** invoke this from the orchestrator; the user triggers it directly ("training status", "sync training data", etc.). The training-context agent reads the CSVs it produces.
 
 ## Workflow
 
-### Step 0a: Load Athlete Profile (always)
+### Step 0a: Load the Active Athlete Profile (always)
 
-At the start of every session, read `profiles/default.yaml` (or a user-specified `profiles/<name>.yaml`). The profile holds long-lived, manually-maintained preferences: experience, goals, body-part emphasis, session-time budget, volume tolerance, equipment, known preferences, active injuries.
+At the start of every session, determine **which** athlete you're working with, then load that profile.
 
-Pass the profile to every skill as `athlete_profile`. Skills use it to size sessions, pick exercises, and calibrate volume against `schemas/programming-guidelines.md`.
+1. **Resolve the active profile.** Read `profiles/.active` and load the profile it names (use the first non-empty, non-comment line — a filename in `profiles/`). This is the normal path.
+2. **If `.active` is missing, or names a file that doesn't exist:** glob `profiles/*.yaml`.
+   - Exactly one real profile (anything other than the `default.yaml` template) → load it, and offer to write `profiles/.active` so future sessions skip this.
+   - More than one real profile → **ask** which athlete before proceeding (`AskUserQuestion`).
+   - Only `default.yaml` (the template), or nothing → fall back to sensible defaults (intermediate, 60 min, hypertrophy, moderate volume tolerance) and **note the fallback**: *"No active athlete profile set. I'm using defaults (intermediate / 60-min / hypertrophy). Run `/profile-builder` for a guided setup, or set `profiles/.active`."* Don't block the request — produce the workout with defaults and mention the builder at the end.
 
-If no profile file exists, fall back to sensible defaults (intermediate, 60 min, hypertrophy, moderate volume tolerance) and **note the fallback** in the output — something like: *"No profile found at `profiles/default.yaml`. I'm using defaults (intermediate / 60-min / hypertrophy). Run `/profile-builder` any time for a guided setup, or edit `profiles/default.yaml` directly."* Do not block the current request on this — produce the workout with defaults and mention the builder at the end.
+The profile holds long-lived, manually-maintained preferences: experience, goals (including a `long_range` campaign and the near-term `event` + `targets`), body-part emphasis, session-time budget, volume tolerance, equipment, known preferences, `training_constraints` (date-gated modality/scheduling rules), and `active_injuries` (with `surgery_date` and `clearance_milestones`).
+
+Pass the profile to every skill as `athlete_profile`. Skills use it to size sessions, pick exercises, calibrate volume against `schemas/programming-guidelines.md`, and respect injury restrictions and date-gated constraints.
+
+**Reconcile the request against the profile (before generating anything).** Once you've read the user's request (Step 1), diff it against the loaded profile and surface mismatches:
+- **New durable facts** not yet in the profile (a new event target, a changed constraint, a milestone now cleared) → offer to add them.
+- **Contradictions** (the request says X, the profile says Y) → surface and ask which wins.
+- **Stale markers** (an `event.date` in the past, a `training_constraints[].until` that has passed, a `notes` "current block" whose end date has arrived) → flag for review.
+
+Use `AskUserQuestion` to confirm, then write the change back to the profile and bump `updated:`. Only **durable** info goes to the profile — not transient state ("tired today," "traveling this week"), which belongs in the request or training context. If nothing conflicts, proceed silently.
 
 ### Step 0b: Gather Training Context (when available)
 
@@ -43,6 +57,8 @@ Invoke the **training-context** agent to pull and analyze recent training data. 
 - Load-aware programming (adjust intensity based on fatigue)
 - Informed periodization (use progression trends for phase timing)
 - Gap filling (prioritize undertrained patterns or energy systems)
+
+Note: training-context reads Garmin data from cached CSVs in `fitness-data/` (written by the user-triggered `garmin-training` skill), **not** from live MCP. If those CSVs are missing or stale, training-context will note it as a gap and the workout still gets produced — never block on Garmin freshness. Tell the user to run "training status" or "sync training data" if they want fresher numbers next time.
 
 Pass relevant context sections into each skill:
 
@@ -84,12 +100,30 @@ Ask the user if critical info is missing:
 | Single strength workout | strength-trainer |
 | Sport-specific workout | sport-trainer |
 | Named protocol (e.g., 5/3/1) | protocol-engine |
-| Multi-week program | (strength-trainer OR sport-trainer) + program-builder |
+| Multi-week program | program-builder (skeleton) → (strength-trainer OR sport-trainer) per phase → program-builder (progression) |
 | Workout with injury | injury-adapter + (strength-trainer OR sport-trainer) |
-| Full program with injury | injury-adapter + (strength-trainer OR sport-trainer) + program-builder |
-| Protocol-based program | protocol-engine + program-builder |
+| Full program with injury | program-builder (skeleton) → injury-adapter + (strength-trainer OR sport-trainer) per phase → program-builder (progression) |
+| Protocol-based program | program-builder (protocol-aware skeleton) → protocol-engine fills protocol-fixed cycle work + (strength-trainer OR sport-trainer) varies accessories per cycle (+ injury-adapter on amended segments) → program-builder (macro progression/assembly) |
 
 Read the appropriate skill files and follow their instructions.
+
+#### Multi-week programs: the skeleton-first handoff
+
+program-builder owns the macro structure but **does not pick exercises** — the trainers do. For any multi-week program, run three passes:
+
+1. **Skeleton.** Invoke **program-builder** with the `athlete_profile` (+ `load_assessment`, `progression`, `gap_analysis`). It returns a periodization skeleton: the phase plan plus a **phase spec** per phase (volume, intensity, rep range, split, per-muscle/per-system targets). No exercises yet.
+2. **Fill each phase.** For **each** phase spec, invoke **strength-trainer** or **sport-trainer**, passing that phase spec the same way you'd pass a profile. Each call returns one representative session per scheduled day, hitting the spec's targets. If there's an injury, route each fill through **injury-adapter** first.
+3. **Progression.** Hand the trainer-filled sessions back to **program-builder**, which replicates them across each phase's weeks, mutates loads/reps/sets per its progression rules, and inserts deloads — without adding or swapping exercises.
+
+Then compose the full program in Step 4. Do not let program-builder author sessions from scratch, and do not ask a trainer to decide periodization — keep each in its lane.
+
+##### Protocol-based programs
+
+For a program built on a named protocol, program-builder and protocol-engine are **complementary, not either/or** — program-builder still owns the skeleton; protocol-engine fills the protocol-fixed main work per cycle, and the trainer varies the open accessories. The cycle→timeline mapping (how many cycles fit, where deloads/periodization waves go, including non-divisible durations like 5/3/1 into 14 weeks) is **program-builder's**; fidelity *inside* a cycle (rep waves, AMRAP, training-max math) is **protocol-engine's**. For each protocol phase spec (carries `protocol` + `protocol_fixed`), route the protocol-fixed work to **protocol-engine** and the open accessories to a **trainer**, then hand both back to program-builder for assembly. Don't ask program-builder to author protocol main lifts, and don't ask protocol-engine to choose cycle count or timeline.
+
+##### Injury across segments
+
+When an injury affects only part of a program, program-builder flags the affected weeks on the relevant phase specs (`amendment` with `rehab_phase`, `affected_weeks`, `return_ramp`). Invoke **injury-adapter** on **only** those flagged segments, passing the spec's `rehab_phase`. As the program advances and the `rehab_phase` ramps (acute → early → late → return-to-sport), the modifications taper; once a segment reaches return-to-sport it reverts to the unmodified protocol/trainer output.
 
 ### Step 4: Compose and Render Output
 

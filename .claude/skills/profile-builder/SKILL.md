@@ -55,7 +55,10 @@ Between blocks, briefly echo back what's been captured so the athlete can correc
 
 4. **Primary goal** (AskUserQuestion, one of): hypertrophy, strength, endurance, sport-performance, general-fitness, weight-loss, rehab. Briefly explain what each implies for programming (hypertrophy → volume-biased; strength → intensity-biased with long rest; endurance → Zone 2 dominant; sport-performance → periodized to an event; etc.).
 5. **Secondary goals** (free text list, optional) — ranked if multiple.
-6. **If primary goal is sport-performance:** ask for event name, event date (ISO), and a one-line description. Otherwise skip.
+6. **Events & horizons** (parts a–c):
+   - **a. Near-term event** — *if primary goal is sport-performance, or there's a clear target event:* event name, event date (ISO), one-line description. Otherwise skip.
+   - **b. Event targets** (optional, free text; only if there's an event) — the concrete demands the event imposes, if known: number of peaks/sessions, total vertical (ft), distance range (mi), pack/load weight range (lb). These let skills size load and volume from numbers instead of prose. Skip any the athlete doesn't have.
+   - **c. Long-range goal** (optional, free text — ask regardless of primary goal) — a multi-year campaign or horizon goal that outlives this program block (e.g., "Bulger 100 by age 60"): name, horizon (date / year / age gate), one-line description. Explain the distinction: the **event** is what *this* program targets; the **long-range goal** is the bigger arc the event is one phase of. Skip if none.
 
 #### Block C — Session preferences
 
@@ -106,13 +109,24 @@ Between blocks, briefly echo back what's been captured so the athlete can correc
 #### Block H — Active injuries (always ask)
 
 18. **Any active injuries or limitations?** (yes/no via AskUserQuestion). If yes, for each:
-    - Injury name (e.g., "Left ACL reconstruction, 4 weeks post-op")
+    - Injury name (e.g., "ACL/meniscus reconstruction")
+    - Surgery date (free text, ISO) — if it was surgical; else leave null.
     - Phase (AskUserQuestion: acute / early-rehab / late-rehab / return-to-sport)
     - Restrictions (free text list — e.g., ["no standing lifts", "left leg unloaded"])
     - Cleared by provider? (AskUserQuestion: yes / no / partial)
+    - **Clearance milestones** (optional) — date-aware return-to-activity gates the coach should track and reconcile against. For each: the milestone (e.g., "easy-ish hikes", "add pack weight", "return-to-sport"), a target date or month if known, status (pending / awaiting-provider / cleared), and what gates it. Especially valuable for rehab pointed at an event. Skip if none.
     - Notes (free text, optional)
 
     Loop until they're done adding.
+
+#### Block H-b — Training constraints (date-gated)
+
+18b. **Any date-gated rules the coach must respect?** (free text, optional) — modality limits, scheduling structure, or return-to-activity gates that shape every session. For each, capture the rule, an `until` date if it lifts on a date (else open-ended/null), and the reason. Examples:
+    - "Incline treadmill only — no outdoor hiking" until 2026-09 (PT clearance for impact)
+    - "Long vertical/distance on weekends; weekday sessions stay short" (schedule)
+    - "No loaded overhead pressing" (shoulder management)
+
+    These differ from `known_preferences` (tastes, not hard gates) and from `active_injuries` (a constraint can outlive or precede a specific injury). Each session the coach checks whether any `until` date has passed and flags it during reconcile. Skip if none.
 
 #### Block I — Working weights (optional)
 
@@ -127,6 +141,16 @@ Between blocks, briefly echo back what's been captured so the athlete can correc
 
 20. **Anything else the coach should know?** (free text) — training history, recent competition results, lifestyle constraints (travels every 3rd week for work), etc. Skip if nothing comes to mind.
 
+#### Block K — Data sources (Garmin opt-in)
+
+21. **Do you have a Garmin Connect account you'd like to use for training context?** (AskUserQuestion: yes / no).
+
+    Briefly explain: if yes, the `garmin-training` skill can pull your training status, VO2 max, readiness, daily summaries, and per-activity training effect into a local `fitness-data/` folder. The `training-context` agent reads from those files when designing workouts. Live MCP calls only happen when the user explicitly triggers a sync — never automatically — so the data on disk is the source of truth between user-initiated refreshes.
+
+    If **no**: write `garmin_enabled: false` and skip the rest of this block.
+
+22. **(If yes)** Optional override for where Garmin data is stored. Default is `./fitness-data/` in this project. Ask: *"Use the default, or point at an existing folder (e.g., a shared nutrition workspace)?"* If they give a path, store it in `garmin_data_path`; otherwise leave the field null. This is the only Block K input that needs a non-boolean value, so use free text.
+
 ### Step 3 — Summarize and confirm
 
 Render the profile as YAML in a code block and show it to the athlete. Ask: **"Save this to `profiles/<name>.yaml`? (yes / edit one field / cancel)"** via AskUserQuestion.
@@ -135,14 +159,23 @@ If they pick *edit one field*: ask which field, take the new value, re-render th
 
 ### Step 4 — Write the file
 
-Write the profile to `profiles/<name>.yaml` following the structure and style of `profiles/default.yaml` — section comment headers, aligned values, trailing empty fields (`active_injuries: []`, `working_weights: []`) when empty rather than omitting them.
+Write the profile to `profiles/<name>.yaml` following the structure and style of `profiles/default.yaml` — section comment headers, aligned values, trailing empty fields (`active_injuries: []`, `training_constraints: []`, `working_weights: []`) when empty rather than omitting them.
 
 Set:
 - `created` to today's ISO date (from the system context, not guessed)
 - `updated` to today's ISO date
 - Every field the user gave a value for
-- Empty list `[]` for list fields they skipped
+- Empty list `[]` for list fields they skipped (`secondary`, `training_constraints`, an injury's `clearance_milestones`, etc.)
+- `null` for nested objects/fields they skipped (`goals.long_range.*`, `goals.event.targets.*`, an injury's `surgery_date`) — keep the keys present so the structure is visible
 - Empty string `""` for prose fields they skipped
+
+### Step 4a — Offer to set this profile active
+
+The orchestrator loads whichever profile `profiles/.active` names (see `workout-coach` Step 0a). After writing, check `profiles/.active`:
+- If it's **missing**, or this is the only real profile → offer to write `profiles/.active` pointing at the new file so the coach uses it by default. (AskUserQuestion: yes / no.)
+- If it already points at a **different** athlete → ask whether to switch the active profile to this one, or leave it. Don't silently repoint.
+
+Write `profiles/.active` as a single line containing the filename (e.g., `bjray.yaml`).
 
 ### Step 5 — Confirm and hand off
 
@@ -152,6 +185,15 @@ Tell the athlete:
 3. **How to edit later** — they can open the file directly; or re-run `/profile-builder <name>` to overwrite.
 4. **Suggested next step** — e.g., "`/workout-coach design me a workout for today`" or "`/strength-trainer hypertrophy`" — either will pick up the profile.
 
+### Step 5a — Optional initial Garmin snapshot
+
+**Only if `garmin_enabled` is true.** Ask the athlete once: *"Want me to pull an initial Garmin snapshot now so the coach has training context on the first session? This is the only time it'll run without you asking — every other refresh is on your trigger."* (AskUserQuestion: yes / no.)
+
+- If **yes**: invoke the `garmin-training` skill in Snapshot mode (trigger phrase: "training status"). It will create `fitness-data/`, fetch the latest training status / VO2 / readiness / daily summary / weigh-in, write `health-snapshot.md`, and upsert today's row into `performance-stats.csv`. Surface any errors plainly — if the MCP isn't installed yet, the skill degrades and tells the user what's missing.
+- If **no**: explain they can run "training status" or "sync training data" any time. The `training-context` agent will note Garmin as a gap in `metadata.gaps_in_data` until they do.
+
+If `garmin_enabled` is false, skip this step entirely.
+
 ## Field-to-schema mapping
 
 Every answer maps to a field in `schemas/athlete-profile.yaml`. When writing the YAML, use the schema's field names exactly. Never invent fields the schema doesn't define.
@@ -159,15 +201,17 @@ Every answer maps to a field in `schemas/athlete-profile.yaml`. When writing the
 | Block | Questions | Schema path |
 |-------|-----------|-------------|
 | A | 1-3 | `name`, `experience_level`, `training_age_years` |
-| B | 4-6 | `goals.primary`, `goals.secondary`, `goals.event` |
+| B | 4-6 | `goals.primary`, `goals.secondary`, `goals.event` (+ `.targets`), `goals.long_range` |
 | C | 7-10 | `session_preferences.typical_duration_minutes`, `.hard_cap_minutes`, `.days_per_week`, `.preferred_days` |
 | D | 11-12 | `volume_tolerance`, `recovery_quality` |
 | E | 13-14 | `equipment_available`, `training_environment` |
 | F | 15-16 | `body_part_emphasis`, `body_part_maintenance` |
 | G | 17 | `known_preferences` |
-| H | 18 | `active_injuries[].{name, phase, restrictions, cleared_by_provider, notes}` |
+| H | 18 | `active_injuries[].{name, surgery_date, phase, restrictions, cleared_by_provider, clearance_milestones[], notes}` |
+| H-b | 18b | `training_constraints[].{rule, until, reason}` |
 | I | 19 | `working_weights[].{exercise, weight, unit, for_reps, updated}` |
 | J | 20 | `notes` |
+| K | 21-22 | `garmin_enabled`, `garmin_data_path` |
 
 For fields not asked about (e.g., `preferred_times_of_day`), write them as empty list or null — do not invent values.
 
@@ -191,6 +235,9 @@ Before writing the YAML, check:
 6. `equipment_available` is a non-empty list.
 7. `active_injuries[].phase` (if any) is one of: acute, early-rehab, late-rehab, return-to-sport.
 8. `working_weights[].unit` (if any) is lbs or kg.
+9. `active_injuries[].clearance_milestones[].status` (if any) is one of: pending, awaiting-provider, cleared.
+10. `goals.event.targets` numeric fields (if present) are numbers; range fields (`distance_miles`, `pack_weight_lbs`) are `[min, max]` with min ≤ max.
+11. `training_constraints[].until` (if present) is an ISO date or month (`YYYY-MM` / `YYYY-MM-DD`); `null` is allowed for open-ended rules.
 
 If any validation fails, explain the issue plainly and ask the user for a correction before writing.
 
@@ -221,12 +268,24 @@ athlete_profile:
     primary: ...
     secondary:
       - ...
+    long_range:
+      name: ...
+      horizon: ...
+      description: ...
     event:
       name: ...
       date: ...
       description: ...
+      targets:
+        peaks: ...
+        total_vertical_ft: ...
+        distance_miles: ...
+        pack_weight_lbs: ...
+        notes: ...
 
-  # ... (continue, section-by-section, matching profiles/default.yaml structure)
+  # ... (continue section-by-section, matching profiles/default.yaml — including
+  #      active_injuries[].{surgery_date, clearance_milestones} and the
+  #      training_constraints block)
 ```
 
 Comment headers present (use `# ─── Section ──` style from `profiles/default.yaml`). Empty collections written as `[]` or `""` explicitly.

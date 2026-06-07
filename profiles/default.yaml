@@ -27,10 +27,20 @@ athlete_profile:
                                         #   | rehab
     secondary:
       - general-fitness
-    event:
+    long_range:                         # multi-year campaign, if any (else null)
+      name: null
+      horizon: null                     # ISO date / year / age gate
+      description: null
+    event:                              # near-term event the program targets
       name: null
       date: null
       description: null
+      targets:                          # structured event demands (else null)
+        peaks: null
+        total_vertical_ft: null
+        distance_miles: null
+        pack_weight_lbs: null
+        notes: null
 
   # ─── Body-part emphasis ────────────────────────────────────────────────
 
@@ -80,7 +90,12 @@ athlete_profile:
     - dislikes standing barbell overhead press
     - enjoys cable and machine work for accessories
 
-  active_injuries: []
+  active_injuries: []                   # see schema for the per-injury shape
+                                        # (surgery_date, clearance_milestones, …)
+
+  training_constraints: []              # date-gated modality / scheduling rules,
+                                        # e.g. { rule: "incline treadmill only",
+                                        #        until: "2026-09", reason: "PT" }
 
   # ─── Loads & baselines ─────────────────────────────────────────────────
 
@@ -89,3 +104,10 @@ athlete_profile:
   # ─── Free-form notes ───────────────────────────────────────────────────
 
   notes: ""
+
+  # ─── Data sources ──────────────────────────────────────────────────────
+
+  garmin_enabled: false                 # set true to surface Garmin data
+                                        # in training context (requires the
+                                        # garmin-training skill + MCP setup)
+  garmin_data_path: null                # null → ./fitness-data/ (default)

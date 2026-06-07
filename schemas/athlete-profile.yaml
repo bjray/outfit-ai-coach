@@ -33,11 +33,28 @@ athlete_profile:
                                         #   | weight-loss | rehab
     secondary: string[]                 # optional — ranked
 
+    long_range:                         # optional — a multi-year campaign that
+                                        # outlives the current program block. The
+                                        # near-term `event` is usually one phase
+                                        # of this.
+      name: string | null               # e.g., "Bulger 100 — WA top-100 peaks"
+      horizon: string | null            # ISO date / year / age gate (deadline)
+      description: string | null
+
     # Specific targets if applicable
-    event:                              # if training for an event
+    event:                              # the near-term event the current program
+                                        # is periodized toward
       name: string | null               # e.g., "Leadville 100 MTB"
       date: string | null               # ISO date
       description: string | null
+      targets:                          # optional — structured performance
+                                        # demands of the event. Skills size
+                                        # load/volume from these, not from prose.
+        peaks: number | null
+        total_vertical_ft: number | null
+        distance_miles: [number, number] | null   # [min, max]
+        pack_weight_lbs: [number, number] | null   # [min, max]
+        notes: string | null
 
   # ─── Body-part emphasis ────────────────────────────────────────────────
 
@@ -83,14 +100,34 @@ athlete_profile:
                                         #       "loves cable work",
                                         #       "will skip sessions > 60 min"
 
-  active_injuries:                      # same shape as training-context
+  active_injuries:                      # extends the training-context injury
+                                        # shape with profile-level rehab planning
     - name: string                      # e.g., "Left ACL — early rehab"
+      surgery_date: string | null       # ISO date of surgery, if any
       phase: string                     # acute | early-rehab | late-rehab
                                         #   | return-to-sport
       restrictions: string[]            # e.g., ["no standing lifts",
                                         #        "left leg unloaded"]
       cleared_by_provider: boolean
+      clearance_milestones:             # optional — date-aware return gates the
+                                        # coach can track and reconcile against
+        - milestone: string             # e.g., "easy-ish hikes", "add pack
+                                        #        weight", "return-to-sport"
+          target_date: string | null    # ISO date or month (e.g., "2026-09")
+          status: string                # pending | awaiting-provider | cleared
+          gated_by: string | null       # what unlocks it
       notes: string | null
+
+  # ─── Training constraints ──────────────────────────────────────────────
+  # Date-gated rules the coach must respect: modality limits, scheduling
+  # structure, return-to-activity gates. During reconcile the coach flags any
+  # whose `until` date has passed.
+
+  training_constraints:
+    - rule: string                      # e.g., "incline treadmill only — no
+                                        #        outdoor hiking"
+      until: string | null              # ISO date the gate lifts (null = open-ended)
+      reason: string | null             # e.g., "PT clearance for impact"
 
   # ─── Loads & baselines (for strength) ──────────────────────────────────
   # Optional — if present, strength skills use these as a baseline
@@ -106,3 +143,22 @@ athlete_profile:
   # ─── Free-form notes ───────────────────────────────────────────────────
 
   notes: string                         # anything else the coach should know
+
+  # ─── Data sources ──────────────────────────────────────────────────────
+  # Opt-in flags for external data integration. The `garmin-training` skill
+  # is user-triggered (no auto-fetch); these fields just tell other parts of
+  # the system whether Garmin data should be expected on disk.
+
+  garmin_enabled: boolean               # default false — set true if the
+                                        # user has a Garmin account they
+                                        # want surfaced in training context.
+                                        # Affects: training-context agent
+                                        # (will look for fitness-data/ CSVs
+                                        # and flag gaps if missing).
+
+  garmin_data_path: string | null       # default null → `./fitness-data/`
+                                        # in this project. Override only if
+                                        # sharing storage with another
+                                        # project (e.g. a nutrition
+                                        # workspace). Absolute or
+                                        # project-relative path.
