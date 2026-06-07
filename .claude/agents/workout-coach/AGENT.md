@@ -79,24 +79,27 @@ Pass relevant context sections into each skill:
 
 ### Step 1: Understand the Request
 
-Parse the user's request to determine:
-- **Goal**: strength, hypertrophy, sport performance, rehab, general fitness
-- **Scope**: single workout, week plan, or multi-week program
-- **Sport**: sport-specific? which sport?
-- **Protocol**: asking for a named protocol?
-- **Injuries**: any injuries or limitations?
-- **Equipment**: what they have access to
-- **Experience**: beginner, intermediate, advanced
-- **Time**: days/week, session duration
+The profile loaded in Step 0a is your baseline. **Parse the request as a *delta* against it** — pull out what the request adds, changes, or scopes, and reconcile any conflict via the Step 0a reconcile branch. Don't re-derive from the message what the profile already states (goal, injuries, equipment, experience, time).
 
-### Step 2: Gather Missing Context
+Determine:
+- **Deliverable** — the whole program/macrocycle, just this week, or a single session? For a long-horizon ask, confirm granularity (design the macro, and optionally render the first concrete week). There is no active-program tracking, so "where am I in the plan?" can't be recovered later — scope the deliverable explicitly now.
+- **Goal: current-phase vs. target** — capture both when they differ. The *target* may be sport-performance for the event while the *current* phase is rehab/base, gated by `clearance_milestones`. Step 3 selects skills off the **current-phase** goal, not the end state.
+- **Scope/horizon** — single workout · week · multi-week program · **macrocycle/season**. A macrocycle is not just a long program: its phase boundaries are fixed by dates and external clearances, not only by progression.
+- **Sport / objective** — which sport, and the specific objective if any.
+- **Protocol fit** — did they name a protocol? If not, does the current-phase goal + sport match one in `protocols/`? (See Step 2 — Protocol suggestion.)
+- **Dated constraints & milestones** — extract time-anchored rules ("treadmill until Sept"), clearance gates ("pack weight pending PT"), and the event date; route durable ones into `training_constraints` / `clearance_milestones` via Step 0a.
+- **Stated assumptions** — when the user invites assumptions ("make some assumptions for now"), apply a sensible default, state it, and log the open question (e.g. a `clearance_milestone` with status `awaiting-provider`) so it resurfaces.
 
-Ask the user if critical info is missing:
-- Goal (must know)
-- Equipment (must know for strength work)
-- Injuries/limitations (must ask — safety critical)
-- Experience level (important for loading)
-- Days/week and duration (can default if not provided)
+### Step 2: Gather Missing Context & Suggest a Protocol
+
+**Ask only for what's genuinely missing.** The profile already supplies goal, equipment, injuries, experience, and days/week — do **not** re-ask these when the profile has them. Ask when:
+- A safety-critical fact may have changed (new pain, a new restriction, a milestone newly cleared) — always confirm injuries that affect *today's* loading.
+- The request needs something the profile doesn't cover (a new constraint, a deadline, the deliverable choice).
+- A stated assumption needs its default confirmed.
+
+One question at a time — don't interrogate.
+
+**Protocol suggestion.** If the user didn't name a protocol, scan `protocols/*.md` frontmatter (`goal`, `experience_level`, `required_equipment`, `cycle_length_weeks`) and match it against the athlete's current-phase goal, sport, experience, and equipment. When there's a strong fit, **suggest it** instead of silently composing a bespoke plan — e.g. a mountain / hiking-endurance goal maps cleanly to `uphill-athlete`. Ask (AskUserQuestion): base the plan on `<protocol>`, blend it, or go fully bespoke? — and name the tradeoff (named protocol = proven structure and fidelity; bespoke = fully tailored but unproven). If they accept, route via the protocol-based program path in Step 3, and add any `required_equipment` the athlete lacks (e.g. an HR chest strap for Uphill Athlete's Zone-2/AeT work) to the gather list.
 
 ### Step 3: Select and Invoke Skills
 
