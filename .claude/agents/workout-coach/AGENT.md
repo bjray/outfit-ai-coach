@@ -52,11 +52,14 @@ Use `AskUserQuestion` to confirm, then write the change back to the profile and 
 
 ### Step 0b: Gather Training Context (when available)
 
-Invoke the **training-context** agent to pull and analyze recent training data. This layers on top of the profile:
+Invoke the **training-context** agent to pull and analyze recent training data. **Pass the loaded `athlete_profile` into the agent** (goals, `event.targets`, `active_injuries`, `training_constraints`) so its analysis is goal-, injury-, and constraint-aware — see training-context Step 0. Without the profile it analyzes in a vacuum: it can miss the gap that matters (capacity vs. the event's demands) and surface a dangerous one — e.g., flagging "no running" as a neglected energy system when running is contraindicated.
+
+This layers on top of the profile:
 - Smarter exercise selection (avoid duplicating recent work)
-- Load-aware programming (adjust intensity based on fatigue)
+- Load-aware programming (adjust intensity based on fatigue **and rehab status**)
 - Informed periodization (use progression trends for phase timing)
-- Gap filling (prioritize undertrained patterns or energy systems)
+- Gap filling (prioritize undertrained patterns or energy systems **the athlete's constraints actually permit**)
+- Goal-gap framing (current capacity vs. the event's `targets`)
 
 Note: training-context reads Garmin data from cached CSVs in `fitness-data/` (written by the user-triggered `garmin-training` skill), **not** from live MCP. If those CSVs are missing or stale, training-context will note it as a gap and the workout still gets produced — never block on Garmin freshness. Tell the user to run "training status" or "sync training data" if they want fresher numbers next time.
 
@@ -70,7 +73,9 @@ Pass relevant context sections into each skill:
 | injury-adapter | `active_injuries`, `recent_activity` (tolerated exercises) |
 | protocol-engine | `strength_trends` (working weights), `load_assessment` |
 
-**Skip context when:** user says "just give me a quick workout," no MCP sources configured, or user provides all context verbally. Profile still loads — profile is not optional, context is.
+**Skip the load pull when:** the user says "just give me a quick workout," or no data sources are configured. A detailed *verbal* description is **not** a reason to skip — goal/structure context (which lives in the profile) is different from recent-**load** context (fatigue, recent volume, progression). A user can hand you a full plan and still need the load pull to time deloads. Only skip when they explicitly decline it or there's genuinely no data.
+
+**Weight context to its confidence.** When `metadata.confidence` is `low` (sparse data, key Garmin metrics null, treadmill sessions that under-report vertical) — and especially for a rehab athlete — lean on the profile and direct questions over thin numbers, and honor `load_assessment.rehab_caveat`. Don't let one misleading signal (a high TSB that's really post-op detraining) drive the plan. Profile still loads — profile is not optional, context is.
 
 ### Step 1: Understand the Request
 

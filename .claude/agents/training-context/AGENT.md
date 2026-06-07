@@ -16,6 +16,17 @@ Read `schemas/training-context.yaml` for the full output structure. Your output 
 
 ## Workflow
 
+### 0. Read the Athlete Profile (if provided)
+
+The orchestrator passes the `athlete_profile` with every invocation. Read it first — it frames everything you produce:
+
+- **Populate `athlete_summary`** from it: `experience_level`, `primary_goal`, `primary_sport`, `active_injuries` (names + phase), `equipment_available`, `training_age_years`. Don't re-derive these from raw data when the profile states them.
+- **Make gap analysis goal-aware.** If `goals.event.targets` is present (vertical, distance, pack weight, etc.), measure recent capacity against those targets and report the shortfall in `gap_analysis.goal_gaps` — not just generic frequency.
+- **Make gap analysis constraint-aware.** Read `training_constraints` and `active_injuries[].restrictions`. **Never** flag a forbidden modality as a gap or put it in `recommendations`. If running is contraindicated, "low running volume" is not a gap.
+- **Carry a rehab lens into load assessment** (see step 5).
+
+If no profile is passed, proceed from data alone and note it in `metadata.gaps_in_data`.
+
 ### 1. Identify Available Data Sources
 
 Check which data sources are accessible:
@@ -23,12 +34,21 @@ Check which data sources are accessible:
 | Source | How to Access | Data Available |
 |--------|--------------|----------------|
 | Strava | MCP: strava tools | Activities: runs, rides, hikes with HR, pace, distance, elevation |
-| Garmin Connect | MCP: garmin tools | Activities, sleep, HRV, resting HR, training status, body battery |
+| Garmin Connect | **CSVs in `fitness-data/`** (written by the `garmin-training` skill) | Activities, sleep, HRV, resting HR, training status, body battery, VO2 max, readiness |
 | TrainingPeaks | MCP: trainingpeaks tools | Planned workouts, TSS, CTL/ATL/TSB |
 | oneten | MCP: oneten tools | Custom app — strength sessions, exercises, sets, reps, weights |
 | Manual logs | Local files | Markdown/CSV logs the user maintains |
 
 If a source is unavailable, skip it gracefully and note it in `metadata.gaps_in_data`.
+
+### Garmin is CSV-first (do not call the MCP directly)
+
+The `garmin-training` skill is the **only** entry point that calls Garmin Connect's MCP. It writes CSVs into `fitness-data/`; you read those CSVs. Do **not** call `garmin_get_*` tools yourself.
+
+- If `fitness-data/` is missing or empty, treat Garmin as unavailable for this run. Add a `gaps_in_data` note telling the user to run `/garmin-training` (or "training status") to seed the cache.
+- If `fitness-data/` exists but the most recent rows are >24h old, still use them. Flag staleness in `metadata.gaps_in_data` (e.g., *"Garmin performance-stats last updated 2026-05-28 — run 'sync training data' for fresher numbers"*) but do not auto-trigger a refresh. Refresh is user-initiated.
+
+The path is `./fitness-data/` by default. If the user's profile or project CLAUDE.md sets `garmin_data_path`, read from there instead.
 
 ### 2. Pull Recent Training Data
 
@@ -41,7 +61,16 @@ Fetch data for these windows:
 
 **Strava:** Recent activities — type, duration, distance, elevation gain, avg HR, suffer score. Classify by type and intensity zone.
 
-**Garmin:** Activities with HR zones and training effect. Daily metrics: resting HR, HRV, sleep score, body battery, training status. Use Garmin's training load and VO2max if available.
+**Garmin:** Read from `fitness-data/` CSVs (do not call MCP). Map files to schema fields:
+
+| CSV | Maps to |
+|-----|---------|
+| `activity-effect.csv` | `recent_activity.sessions[]` (one row per activity; set `source: "garmin"`), `recent_activity.pattern_frequency` (derived from `activity_type` + label), per-activity `aerobic_te` + `anaerobic_te` for load math |
+| `daily-summary.csv` | Daily steps / intensity minutes / active kcal — useful for filling gaps when no structured activity is logged; informs `recent_activity.total_*` totals |
+| `performance-stats.csv` | `load_assessment.readiness_score` (from `training_readiness`); `load_assessment.fatigue_status` (derived from `training_status` + `acwr_status` — `OPTIMAL` = neutral/fresh, `HIGH` = fatigued, `LOW` = under-loading); `load_assessment.acute_load` and `chronic_load` (use the Garmin columns directly — do not recompute); `load_assessment.resting_hr_trend` (compare today's `resting_hr` from daily-summary against the 28-day avg); `load_assessment.hrv_trend` (compare `hrv_last_night_avg` against the balanced band derived from recent history, falling back to `hrv_status` if you don't have enough data yet); `gap_analysis.missing_energy_systems` (read `load_focus_low_aerobic` / `_high_aerobic` / `_anaerobic` against `load_focus_feedback` — e.g. `AEROBIC_HIGH_SHORTAGE` is an explicit gap signal); `athlete_summary` notes for VO2 max and (when available) fitness age |
+| `period-summary.csv` | `progression.endurance_trends` for multi-year context (weekly/yearly volume, distance, ascent) when available; otherwise informs `athlete_summary` (training age, baseline volume) |
+
+If a CSV exists but is empty (header only), treat that signal as "user has the skill installed but hasn't synced yet" and surface it in `gaps_in_data`.
 
 **TrainingPeaks:** Completed workouts with TSS. CTL, ATL, TSB values (authoritative if available). Planned vs. completed adherence.
 
@@ -87,6 +116,10 @@ RPE-based: session_load = duration x RPE(1-10). Apply same ATL/CTL math.
 | -20 to -5 | Fatigued | Consider easier sessions |
 | < -20 | Very Fatigued | Deload recommended |
 
+#### Rehab caveat (when active_injuries include a rehab phase)
+
+A high TSB / "Fresh — Detrained" reading can reflect **injury detraining, not training freshness** — it is not a green light for intensity, and never for the rehabbing limb. When the athlete has an `acute` / `early-rehab` / `late-rehab` injury, set `load_assessment.rehab_caveat` accordingly (e.g., *"TSB +24 largely reflects post-op detraining; intensity gated by rehab phase, not freshness"*). The fatigue model is systemic and unilateral-rehab-blind — flag it so the coach doesn't misread the number.
+
 ### 6. Analyze Progression
 
 **Strength:** Calculate estimated 1RM trends (Epley: 1RM = weight x (1 + reps/30)). Flag progressing, plateaued (3+ weeks no change), or regressing.
@@ -106,6 +139,10 @@ Compare recent activity against targets:
 | Deload | Every 3-4 hard weeks |
 
 Flag: undertrained patterns, neglected energy systems, overdue deloads, stalled progression.
+
+**Goal gaps (if `goals.event.targets` is present).** Beyond generic frequency, compare current demonstrated capacity to the event's demands and record the shortfall in `gap_analysis.goal_gaps` — e.g., *"longest recent hike 1,500 ft vs. 4,500 ft/peak target; carries bodyweight-only vs. 35–45 lb pack."* For an event build, this is the gap that matters most.
+
+**Respect constraints.** Filter every gap and recommendation against `training_constraints` and injury `restrictions`. A contraindicated activity (running, impact, loaded overhead, etc.) is never a gap, even when a generic target is unmet.
 
 ### 8. Assemble Output
 
