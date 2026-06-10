@@ -145,6 +145,19 @@ The event-driven structure below is the reference program-builder draws from whe
 3. **Build** (before sport-specific): Increase intensity, moderate volume
 4. **Base** (earliest phase): High volume, low intensity, aerobic development
 
+## Return-from-injury objective
+
+`objective: return-from-injury` is the bridge from rehab (injury-adapter's territory) back to full sport training — not a watered-down build-base. It coordinates with the athlete's `active_injuries[].phase`, the `active_limitations` brief, and the `clearance_milestones`. Principles:
+
+1. **Build capacity in the *allowed* modality first.** Develop the sport demand using what's cleared before chasing the real thing — incline-treadmill vertical before outdoor trails; bodyweight step-ups and carries before loaded ones; flat distance before vertical. The allowed modality is in `active_limitations.modality_required` / `forbid`.
+2. **Reintroduce one stressor at a time.** Vertical, load, distance, and speed are separate stressors — add one per step, not together. A session that ramps pack weight should not also jump vertical. This is how you find the cause when something flares.
+3. **Quality and symmetry before quantity.** For unilateral injuries (ACL), prioritize single-leg symmetry and movement quality over volume; uneven loading is the thing to fix, not to out-train. Cap by tolerance, not calendar. Specific symmetry/strength thresholds are the PT's call — never invent numeric gates; wait for the athlete to report a cleared milestone.
+4. **Gates are hard caps, not targets.** `load_caps` and gated modalities are ceilings — stay under them until the `clearance_milestone` flips to `cleared`; never anchor a carry or descent to the *event* target (35–45 lb pack, big eccentric descents) while it's gated.
+5. **Lower the dose vs. build-base.** Run at lower intensity and volume than a base block — the goal is tissue tolerance and confidence, progressed under pain/swelling stop-signs (defer the adapted exercise selection to injury-adapter).
+6. **Exit on PT sign-off, not a date or self-assessment.** Graduate to `build-base` / `peak-for-event` only when the relevant `clearance_milestone` is marked `cleared` — which happens when the athlete reports their PT has signed off. Do not advance on the coach's own read of capacity, however good it looks. Until then, hold the objective and surface the pending gate as a checkpoint.
+
+In phase-spec mode, the spec's `goal`/`focus` still drives the session shape; this objective just narrows *which* movements and loads are eligible and how fast they ramp.
+
 ## Complementary Activity Integration
 
 When the user already does sport-specific sessions (e.g., "I climb 3x/week"):
