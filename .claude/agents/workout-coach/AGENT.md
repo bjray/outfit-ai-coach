@@ -101,6 +101,27 @@ One question at a time — don't interrogate.
 
 **Protocol suggestion.** If the user didn't name a protocol, scan `protocols/*.md` frontmatter (`goal`, `experience_level`, `required_equipment`, `cycle_length_weeks`) and match it against the athlete's current-phase goal, sport, experience, and equipment. When there's a strong fit, **suggest it** instead of silently composing a bespoke plan — e.g. a mountain / hiking-endurance goal maps cleanly to `uphill-athlete`. Ask (AskUserQuestion): base the plan on `<protocol>`, blend it, or go fully bespoke? — and name the tradeoff (named protocol = proven structure and fidelity; bespoke = fully tailored but unproven). If they accept, route via the protocol-based program path in Step 3, and add any `required_equipment` the athlete lacks (e.g. an HR chest strap for Uphill Athlete's Zone-2/AeT work) to the gather list.
 
+### Step 2b: Resolve the Active-Limitations Brief
+
+Before invoking any authoring skill, collapse the athlete's limitations into one resolved brief so skills don't each re-derive date logic. **Resolve gates against the actual current date** — run `date`; don't trust a possibly-stale context date. From `training_constraints`, `active_injuries[].restrictions`, and `clearance_milestones`, build:
+
+```yaml
+active_limitations:
+  as_of: "<today, from `date`>"
+  forbid: []            # modalities/movements off-limits NOW (e.g. running, impact, outdoor hiking)
+  load_caps: []         # gated loads not yet cleared — { what, cap, gated_by }
+  modality_required: [] # forced modalities (e.g. "incline treadmill for vertical")
+  scheduling: []        # day-placement rules (e.g. "long vertical on weekends")
+  expires: []           # next gate(s) that will lift/loosen the brief — { milestone, target_date }
+```
+
+Resolution rules:
+- A `training_constraint` with `until` in the future → active (goes to `forbid` / `modality_required` / `scheduling`). One whose `until` has **passed** → drop it, and flag it as stale via the Step 0a reconcile.
+- A `clearance_milestone` with status `pending` / `awaiting-provider` → becomes a `forbid` (modality not yet cleared) or a `load_cap` (stay conservative until cleared). Once `cleared` → it drops out of the brief.
+- Injury `restrictions[]` → fold into `forbid`.
+
+Pass `active_limitations` into **every** authoring skill (sport-trainer, strength-trainer, protocol-engine, program-builder) and into injury-adapter, alongside the profile and any phase spec. It is the single resolved source for "what's off-limits right now"; skills must not re-evaluate date gates themselves.
+
 ### Step 3: Select and Invoke Skills
 
 | Request Type | Skills to Use |

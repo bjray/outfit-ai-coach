@@ -49,6 +49,30 @@ If a `training_context` is provided, layer it over the profile:
 - Check `progression.endurance_trends` to see if aerobic fitness is progressing or stalling
 - Check `gap_analysis.missing_energy_systems` to identify neglected zones
 
+## Active Limitations (from the orchestrator)
+
+The orchestrator passes an `active_limitations` brief — `training_constraints` + injury `restrictions` + `clearance_milestones`, already **resolved against today's date** into a flat list of what's off-limits right now (see workout-coach Step 2b). Honor it at **selection time**:
+
+- **`forbid`** — never select these modalities/movements (e.g. running, impact/plyometrics, outdoor hiking, cutting/pivoting). This overrides the sport profiles below: if "Trail Running → hill repeats / plyometrics" is forbidden, don't program it.
+- **`load_caps`** — keep gated loads at or below the cap (e.g. pack/ruck weight light until PT-cleared); do **not** anchor carries to the event target.
+- **`modality_required`** — use these where the brief forces them (e.g. incline treadmill for vertical when outdoor hiking is gated).
+- **`scheduling`** — respect day placement (e.g. long vertical/distance on weekends).
+
+If a phase target can't be hit within the limitations, say so rather than violating one. injury-adapter runs afterward as the safety backstop — but don't rely on it to catch a forbidden selection you could have avoided.
+
+## Phase Spec mode (called by program-builder)
+
+When you're invoked as part of a multi-week program, the orchestrator hands you a **`phase_spec`** (produced by program-builder) alongside the `athlete_profile`. Your job narrows: **author one representative session per scheduled day that hits the spec's targets.** You do not decide phase order, week count, taper timing, or progression — program-builder owns all of that.
+
+Read the phase spec like a scoped profile:
+- `focus` / `goal` / `intensity_target` → the session's energy-system or strength emphasis (e.g. Zone 2 base vs. threshold vs. VO2max)
+- `per_muscle_or_system[*]` → hit these targets, whether `weekly_sets` for strength work or `weekly_minutes` for an energy zone, distributed across `days_per_week`
+- `split` → the day type for this phase (e.g. "Threshold + lower strength")
+- `session_duration_minutes` → the time budget
+- `rotation_note` → carry over the movements/efforts it names from the prior phase
+
+Produce a single representative session (or one per scheduled day). Do **not** replicate across weeks or add progression — program-builder mutates the dose. If the targets can't fit the time budget, note it rather than under-programming.
+
 ## Sport-Specific Training Profiles
 
 ### Climbing (Rock / Bouldering / Alpine)
@@ -113,7 +137,9 @@ If a `training_context` is provided, layer it over the profile:
 
 ## Periodization Guidance
 
-When the user has an event date, recommend this structure to the program-builder:
+Periodization — phase order, week counts, taper timing — belongs to **program-builder**, not to you. When you generate a single sport session directly (no program), ignore this section. When you're filling a phase spec, program-builder has already chosen the phase; just honor its `focus`/`intensity_target`.
+
+The event-driven structure below is the reference program-builder draws from when an athlete has an event date. It's here so the two skills share a vocabulary — but program-builder owns the decision of which phase you're filling:
 1. **Peak/Taper** (1-2 weeks before): Volume -40-60%, maintain intensity
 2. **Sport-Specific** (4-8 weeks before peak): High specificity, moderate-high intensity
 3. **Build** (before sport-specific): Increase intensity, moderate volume

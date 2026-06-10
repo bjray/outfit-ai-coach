@@ -59,6 +59,17 @@ If a `training_context` is provided, layer it over the profile:
 - Use `gap_analysis.overdue_deload` to potentially start with a deload week
 - Use `gap_analysis.staleness_risk` to identify areas needing a stimulus change
 
+## Active Limitations (from the orchestrator)
+
+The orchestrator passes an `active_limitations` brief — `training_constraints` + injury `restrictions` + `clearance_milestones`, already **resolved against today's date** (see workout-coach Step 2b). It applies to the **concrete window** you author now. Honor it when you spec phases:
+
+- **`forbid`** — don't set a phase target that can only be met with a forbidden modality (e.g. don't spec outdoor vertical while outdoor hiking is gated — spec incline-treadmill vertical instead).
+- **`load_caps`** — when you set a starting load/progression, cap it; don't progress a gated load past its cap until the gate clears.
+- **`modality_required`** / **`scheduling`** — reflect these in `split` and the per-system targets.
+- **`expires`** — a gate's `target_date` is a planning estimate for where the next sub-cycle's boundary sits; bind it via `gate`, not a hard week (see "Gated phases & macrocycles").
+
+Pass the relevant slice of `active_limitations` through to the trainers and to injury-adapter when you hand off each phase.
+
 ## Pass 1 output — the Phase Spec
 
 For each phase in the skeleton, emit a **phase spec**: everything a trainer needs to author a representative session, and nothing about *which* exercises. The trainer reads this exactly like it reads an `athlete_profile`, but scoped to one phase.

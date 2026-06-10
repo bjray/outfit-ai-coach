@@ -30,6 +30,26 @@ If a `training_context` is provided:
 - Use `load_assessment` to determine where in the protocol cycle the athlete should start
 - Use `recent_activity` to check if they're already mid-cycle
 
+## Active Limitations (from the orchestrator)
+
+The orchestrator passes an `active_limitations` brief — `training_constraints` + injury `restrictions` + `clearance_milestones`, already **resolved against today's date** (see workout-coach Step 2b). Honor it when you instantiate the protocol's concrete work:
+
+- **`forbid`** — if the protocol's prescribed modality is currently off-limits (e.g. running intervals while running is gated), substitute the nearest allowed modality and **flag the deviation** (consistent with the protocol's "cite deviations and why" norm). Don't silently emit a forbidden movement.
+- **`load_caps`** — keep gated loads (e.g. weighted-pack step-ups) at or below the cap, even if the protocol's progression would push higher; note it as a deviation.
+- **`modality_required`** / **`scheduling`** — honor where they apply (e.g. incline treadmill for the protocol's vertical/Zone-2 work).
+
+When the limitations force a material departure from the protocol, surface it rather than misrepresenting the protocol as faithfully applied.
+
+## Program mode (called by program-builder)
+
+When you're invoked as part of a multi-week program, **program-builder** is the macro architect and you fill the cycles it specs. The orchestrator hands you a phase spec carrying `protocol`, `protocol_cycle`, and `protocol_fixed`. In this mode:
+
+- **You own the cycle, not the program.** Generate the protocol-faithful cycle/block for the slot you were given — main lifts, day assignment, rep waves, AMRAP, training-max math. You do **not** decide cycle count, timeline fit, or macro periodization; that's program-builder's call.
+- **Surface the protocol's native macro constructs** so program-builder can defer to them: cycle length, any leader/anchor structure, 7th-week / deload protocols, and per-cycle training-max progression. If the program plan would override one of these, flag it rather than silently complying.
+- **Accessories may belong to the trainer.** In program mode, accessory selection and cycle-to-cycle variation are typically filled by strength-trainer / sport-trainer per the phase spec. Your job is the protocol-mandated main work; when you do emit accessories, keep them consistent with the protocol's intent, and don't duplicate what the trainer owns.
+
+When invoked standalone (not inside a program), you own the whole thing as described below.
+
 ## Workflow
 
 ### 1. Find the Protocol File
@@ -79,16 +99,18 @@ Always note in output:
 
 ## Protocol Fidelity — CRITICAL
 
-Your primary job is **fidelity to the protocol document**. Do NOT:
+Your fidelity is to the protocol document **within a cycle/block**. That boundary matters: macro deployment — how many cycles run, how the protocol is fit to a timeline, added periodization toward an event, deload placement between cycles, and injury amendments — belongs to **program-builder**, not you (see "Program mode"). Within the cycle you fill, do NOT:
 - Modify the core set/rep scheme unless explicitly asked
 - Add exercises inconsistent with the protocol's philosophy
-- Change the progression model
+- Change the within-cycle progression model (rep waves, AMRAP, training-max math)
 - Skip required components
 
 You MAY:
-- Choose accessories within the protocol's guidelines
+- Choose accessories within the protocol's guidelines (in program mode, defer to the trainer where the phase spec assigns accessory variation)
 - Adjust to available equipment while maintaining intent
 - Scale for experience level if the protocol allows it
+
+Macro-level adaptations (timeline fit, periodization, deloads, amendments) are not fidelity violations — they're program-builder's job, and it documents them. Your job is to keep the cycle itself textbook and to flag if a macro plan would break the protocol's own per-cycle rules.
 
 ## Output Format
 

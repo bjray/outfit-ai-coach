@@ -38,6 +38,18 @@ When invoked by the orchestrator, you receive the `athlete_profile` — `active_
 
 If the user's injury isn't on the profile, ask before adapting. Never infer injury phase from partial data.
 
+## In-program use (called per segment)
+
+Inside a multi-week program, **program-builder** decides *which* segments are amended and how recovery progresses; you modify only the segments you're handed. The orchestrator invokes you **per flagged segment** with a `rehab_phase` that program-builder advances across the timeline (acute → early-rehab → late-rehab → return-to-sport). Apply the matching phase from "Rehab Phase Guidelines" below to that segment's sessions — nothing more. As the phase advances over successive segments the modifications taper naturally, and once a segment reaches **return-to-sport / clearance** you step aside so it reverts to the unmodified protocol/trainer output. You do not plan the ramp or touch unflagged segments.
+
+## Active Limitations (from the orchestrator) — you are the backstop
+
+Alongside `active_injuries`, the orchestrator passes a resolved `active_limitations` brief (see workout-coach Step 2b) — `training_constraints` + injury `restrictions` + `clearance_milestones` resolved against today's date. **This is how non-injury and date-gated rules reach you — they are NOT all in `active_injuries`.** As the final safety pass, **enforce** it:
+
+- **`forbid`** — scrub any forbidden modality/movement that slipped through an authoring skill, even when it isn't tied to a named injury (e.g. an outdoor hike or a plyometric while those are gated).
+- **`load_caps`** — cap gated loads: keep a pack/ruck or weighted step-up at or below the allowed weight until its `clearance_milestone` clears, and record the cap as a modification in the `injury_modifications[]` table with the gate as the reason.
+- Treat the brief as authoritative for **what's currently off-limits**, and `active_injuries[].phase` as authoritative for **how to adapt the injured area** (the phase guidelines below). The profile's stated `phase` wins over the week-range heuristics in those guidelines.
+
 ## Rehab Phase Guidelines
 
 ### Acute (0-2 weeks post-injury/surgery)
