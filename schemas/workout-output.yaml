@@ -116,15 +116,37 @@ WornLoad:
 
 program:
   name: string
-  duration_weeks: number
+  macrocycle: string | null         # optional — names the overarching campaign/season this
+                                    # program belongs to (e.g. "2027 Season build"). Forward-
+                                    # compatible hook: a future macrocycle model groups phases
+                                    # by `sub_cycle` under this.
+  duration_weeks: number            # planned span; for a gated plan, weeks past a gate are
+                                    # estimates, not commitments (see `gate` below)
   periodization_model: string       # linear | undulating | block
   phases:
     - name: string                  # e.g., "Base", "Build", "Peak", "Deload"
-      weeks: string                 # e.g., "1-4"
+      sub_cycle: string | null      # named sub-cycle/mesocycle this phase belongs to
+                                    # (e.g. "Rehab base", "Outdoor base", "Loaded build").
+                                    # Groups phases for macrocycle/season plans.
+      weeks: string                 # e.g., "1-4"; gated phases may read "~14-21 (gated)"
       focus: string
       volume: string                # low | moderate | high
       intensity: string             # low | moderate | high | max
-  weeks:
+      detail_level: string | null   # full | outline — "outline" = a future gated phase whose
+                                    # concrete sessions are deferred until its gate is met
+      gate:                         # optional — a milestone-bound start boundary (vs a fixed week)
+        milestone: string | null    # references an athlete_profile clearance_milestone
+        target_date: string | null  # ISO date/month — a PLANNING ESTIMATE, not a commitment
+        status: string | null       # pending | awaiting-provider | cleared
+      checkpoint: string | null     # re-plan instruction, e.g. "regenerate this sub-cycle when
+                                    # PT clears outdoor hiking; dates are targets, not commitments"
+      protocol: string | null       # optional — protocol driving this phase (matches a protocols/*.md file)
+      protocol_cycle: string | null # optional — which cycle/segment, e.g. "Cycle 2 of 3 (intensification)"
+      amendment:                    # optional — injury override for this phase (see injury-adapter)
+        rehab_phase: string | null  # acute | early-rehab | late-rehab | return-to-sport
+        affected_weeks: string | null
+        return_ramp: string | null
+  weeks:                            # per-week detail; outline phases may have no weeks here yet
     - week_number: number
       phase: string
       sessions:

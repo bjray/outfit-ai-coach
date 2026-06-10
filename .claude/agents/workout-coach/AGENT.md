@@ -112,6 +112,7 @@ One question at a time — don't interrogate.
 | Workout with injury | injury-adapter + (strength-trainer OR sport-trainer) |
 | Full program with injury | program-builder (skeleton) → injury-adapter + (strength-trainer OR sport-trainer) per phase → program-builder (progression) |
 | Protocol-based program | program-builder (protocol-aware skeleton) → protocol-engine fills protocol-fixed cycle work + (strength-trainer OR sport-trainer) varies accessories per cycle (+ injury-adapter on amended segments) → program-builder (macro progression/assembly) |
+| Macrocycle / season (gated, multi-month) | program-builder decomposes the horizon into `sub_cycle`s; detail the near one in full and **outline** gated future ones; gate transitions on `clearance_milestones`; emit re-plan checkpoints — composed with the protocol / injury paths above as needed (see "Macrocycle / gated programs" below) |
 
 Read the appropriate skill files and follow their instructions.
 
@@ -124,6 +125,16 @@ program-builder owns the macro structure but **does not pick exercises** — the
 3. **Progression.** Hand the trainer-filled sessions back to **program-builder**, which replicates them across each phase's weeks, mutates loads/reps/sets per its progression rules, and inserts deloads — without adding or swapping exercises.
 
 Then compose the full program in Step 4. Do not let program-builder author sessions from scratch, and do not ask a trainer to decide periodization — keep each in its lane.
+
+##### Macrocycle / gated programs (detail-now, outline-later)
+
+For a year-long or externally-gated build (Step 1 scope = macrocycle/season), the three-pass handoff still applies — but only to the **near sub-cycle you detail now**. Tell program-builder to:
+- decompose the horizon into `sub_cycle`s (e.g. Rehab base → Outdoor base → Loaded build → Event peak);
+- gate transitions on the profile's `clearance_milestones`, treating each `target_date` as an estimate, never a commitment, and never prescribing gated/contraindicated work as if the date is certain;
+- author full sessions only for the current/near sub-cycle (`detail_level: full`) and **outline** the gated future ones (`detail_level: outline`) — targets and intent, no concrete sessions yet;
+- emit a `checkpoint` at each gate so the athlete knows to re-invoke the coach when a milestone clears.
+
+Because there is no active-program tracking, those checkpoints are the only mechanism that advances a gated plan: when the athlete returns and a `clearance_milestone` has flipped to `cleared`, the Step 0a reconcile branch picks up the change and you build the next sub-cycle in detail. Make the checkpoints explicit in the output.
 
 ##### Protocol-based programs
 
