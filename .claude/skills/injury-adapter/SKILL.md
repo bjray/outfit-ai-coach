@@ -122,6 +122,20 @@ Alongside `active_injuries`, the orchestrator passes a resolved `active_limitati
 - Leg press (limited ROM, when cleared)
 - Seated calf raises
 
+### Mountain-movement substitutions (sport sessions)
+
+When you're handed a **sport-trainer** session (carries, step-ups, vertical, descents) rather than a gym lift, adapt the *mountain* movements — the tables above don't cover them. ACL-centric, by what the movement demands:
+
+- **Incline treadmill climb** — generally ACL-friendly: no impact, concentric-dominant, controlled. **Usually keep it** — cap grade/duration to tolerance, no pack until the pack milestone clears. The safe vertical substitute for anything impact-based.
+- **Downhill / eccentric descent** — the highest-risk mountain demand for a knee: high eccentric quad load plus impact, and **impact is its own gate.** Program only the eccentric stimulus the athlete is *currently cleared* for (early ACL: controlled bodyweight heel touches), and don't escalate beyond it on your own. Real descents and any impact (e.g. light hopping) wait for a PT strength-symmetry gate — a % of the healthy leg the PT sets — surfaced as a `clearance_milestone`; never self-clear. No "training downhill" on a forbidden modality.
+- **Weighted step-ups / box step-ups** — start low box, **bodyweight**, slow controlled tempo, ROM inside pain-free knee flexion. The step-*down* is the knee-sensitive half — regress with a lower box or hand support. Progress height first, then load (within `load_caps`).
+- **Loaded carries / ruck** — until the pack `clearance_milestone` clears, **bodyweight carries on even ground only**; no pack load, no uneven terrain (it demands stabilization/cutting). After clearance, ramp per `load_caps`, hip-belt weight-bearing over shoulder-strap loading (also spares the RC).
+- **Running / hill repeats / plyometrics / cutting** — contraindicated; `active_limitations` already forbids them. Substitute impact-free vertical (incline treadmill) or controlled step-ups.
+
+Phase note (ACL): in **late-rehab**, keep capped treadmill climbs + bodyweight step-ups/carries and introduce controlled eccentrics only to the cleared level; hold descents, impact, loaded carries, running, and cutting until their gates clear. In **return-to-sport**, reintroduce loaded carries and real descents progressively per PT sign-off.
+
+Shoulder (RC) on mountain work: keep pack weight on the hip belt, avoid heavy shoulder-strap loading and end-range overhead reaching (scrambling); trekking poles only if pain-free.
+
 ## Output Format
 
 Render the modified workout using **Workout Template v0.1** (`schemas/workout-template-v0.1.md`). The injury-adapter adds three things on top of the spec:
