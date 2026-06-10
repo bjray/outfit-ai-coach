@@ -119,6 +119,8 @@ One phase spec → one trainer call → one representative session per scheduled
 
 Once the trainer returns a phase's session(s), you replicate them across that phase's weeks and mutate the dose per the progression rules below. You operate on the trainer's exercise list as given — **adjust sets/reps/load, insert deloads, and ramp across phase transitions; never add, drop, or substitute exercises.** If a phase transition calls for rotating 30-40% of movements (see Phase Transitions), that rotation is achieved by the *next* phase's trainer fill, not by you editing exercises.
 
+**Concrete window for long / gated plans.** When the plan is long or gated (macrocycle / season), do **not** materialize every week — authoring week 9's exact loads from here is false precision. Author day-by-day sessions only for a rolling **concrete window** (~1-2 weeks of the active sub-cycle; record it as `concrete_window`). Render the rest of the active sub-cycle **directionally** (phase targets + progression rules), and leave gated future sub-cycles as **outline**. See "Gated phases & macrocycles."
+
 **Protocol carve-out:** for a protocol-driven phase (`protocol` set), do **not** apply your own load/rep progression to the protocol-fixed work — protocol-engine's within-cycle progression governs (rep waves, AMRAP, training-max bump). Your progression authority there is limited to the macro: the wave *between* cycles and deload placement. You may still progress any trainer-authored accessories the protocol leaves open. See "Protocol-based programs" below.
 
 ## Protocol-based programs
@@ -154,7 +156,7 @@ Some long plans don't transition on a week number — they transition when an **
 
 2. **Gate boundaries on milestones, not just weeks.** When a phase can't start until a clearance lands, set `gate` (the `clearance_milestone` it depends on + a `target_date` + `status`). The `target_date` is a **planning estimate** — express the week span as gated (e.g. `weeks: "~14-21 (gated)"`), and never prescribe gated work as if the date is certain. If the gated modality is contraindicated until the gate clears, say so in the phase notes.
 
-3. **Detail the near sub-cycle, outline the rest.** Author full sessions only for the current/near sub-cycle (`detail_level: full`). Future gated sub-cycles are `detail_level: outline` — emit their targets, gate, and intent, but **defer concrete sessions** until the gate is met. This keeps the plan honest about what can actually be committed to now.
+3. **Three render tiers — concrete window → directional → outline.** Even within the active sub-cycle, don't author every week concretely (you can't honestly prescribe week 9's loads from here). Author **day-by-day sessions only for a rolling concrete window** (~1-2 weeks; set `concrete_window`). Render the **rest of the active sub-cycle directionally** — phase targets + progression rules, not per-day sessions. Gated **future sub-cycles stay outline** (`detail_level: outline`) — targets, gate, and intent only, deferred until the gate is met. This keeps the plan honest about what can actually be committed to now.
 
 4. **Emit re-plan checkpoints.** At each gate, set `checkpoint` with a concrete re-plan instruction ("regenerate the Outdoor Base sub-cycle when PT clears outdoor hiking"). Because there's no active-program tracking, the checkpoint is the artifact's way of telling the athlete to come back and re-invoke the coach — at which point the updated `clearance_milestones` in the profile drive the next sub-cycle.
 

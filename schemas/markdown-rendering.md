@@ -106,6 +106,60 @@ Safety language ("DO NOT perform on left leg", "stop at sharp pain") stays in th
 
 If the block has `instructions`, render them as a single italic line immediately under the heading **only if** the instructions are not already implied by the heading or captured in per-exercise Notes. Default: **skip** block instructions in the markdown view. They live in the YAML.
 
+## Program & macrocycle rendering
+
+Single sessions render as above. A multi-week **program** — especially a gated macrocycle — renders as a *layered* document, not a wall of sessions. Show only what can honestly be committed to now; keep the rest directional.
+
+### Document shape
+
+1. **Header** — program / macrocycle name, the event it targets, and a one-line "how to read this".
+2. **Overview table** — grouped by `sub_cycle`, with gated spans and tier marked (below).
+3. **Concrete window** — the next ~1-2 weeks as full day-by-day v0.1 workouts (each rendered exactly like a single session above).
+4. **Directional remainder** — the rest of the active sub-cycle as its targets + progression rules, **not** per-day sessions.
+5. **Outline — gated future sub-cycles** — targets, gate, and intent only; no sessions.
+6. **Checkpoints / Next actions** — the re-plan instructions; make these impossible to miss.
+7. **Disclaimer** — the program-level gate/safety note.
+
+### Overview table
+
+Group rows by sub-cycle and mark each row's tier and gate. Never render a gated week span as a bare number — append "(gated)" and show status.
+
+| Sub-cycle | Weeks | Focus | Tier | Gate |
+|-----------|-------|-------|------|------|
+| Rehab base | 1-2 | Knee strength, Z2 base | **concrete** | — |
+| Rehab base | 3-8 | Build unilateral strength | directional | — |
+| Outdoor base | ~14-21 (gated) | Vertical on trails | outline | easy-ish hikes · target 2026-09 · pending |
+| Loaded build | gated | Pack carries ramp | outline | pack weight · awaiting-provider |
+
+### Outline (gated) sub-cycle block
+
+Render an outlined sub-cycle as intent + targets + gate, no sessions:
+
+```
+### Outline — Outdoor Base (gated)
+**Starts when:** PT clears easy-ish hikes (target ~Sept 2026 — an estimate, not a commitment)
+**Focus:** Move treadmill vertical onto real trails; begin sustained climbs.
+**Targets:** Z2 4×/wk; weekly vertical ramp ~10%/wk; longest hike → 3,000 ft by sub-cycle end.
+**Filled in on check-in** once the gate clears.
+```
+
+### Checkpoints / Next actions
+
+There is no progress tracking — the checkpoint is how a gated plan advances. Render it as a short, prominent, actionable list (not buried):
+
+```
+## Checkpoints — come back when:
+- [ ] PT clears **easy-ish hikes** (target Sept 2026) → re-invoke the coach to build the Outdoor Base sub-cycle.
+- [ ] PT clears **backpack weight** → we'll ramp loaded carries; assume light to start.
+- [ ] You finish the **concrete window** (~2 weeks) → check in for the next window.
+```
+
+### Program-level disclaimer
+
+For a gated rehab plan, surface the gate/safety note at the **program** level, not only per-exercise:
+
+> **Read this as directional.** Dates are targets, not commitments. Do **not** add pack weight or train outdoors until your PT clears each gate. Future sub-cycles are outlined and will be built when their gate is met.
+
 ## When in doubt
 
 Prefer fewer words. The person executing the workout is looking at their phone between sets — the markdown should read like a coaching card, not a protocol document. Detail that belongs in an audit trail stays in the YAML.

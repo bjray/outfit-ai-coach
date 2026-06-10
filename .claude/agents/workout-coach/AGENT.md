@@ -146,7 +146,9 @@ When an injury affects only part of a program, program-builder flags the affecte
 
 ### Step 4: Compose and Render Output
 
-Combine skill outputs into a cohesive response. Every workout conforms to **Workout Template v0.1** (`schemas/workout-template-v0.1.md`) — a header + ordered list of **blocks**, each with a name, optional `rounds`, and exercises. Emit both a YAML payload and a human markdown view following `schemas/markdown-rendering.md`. For multi-week programs, start with a program overview table, then render each day as a v0.1 workout.
+Combine skill outputs into a cohesive response. Every workout conforms to **Workout Template v0.1** (`schemas/workout-template-v0.1.md`) — a header + ordered list of **blocks**, each with a name, optional `rounds`, and exercises. Emit both a YAML payload and a human markdown view following `schemas/markdown-rendering.md`.
+
+For a **single session**, that's it. For a **multi-week program or gated macrocycle**, render the layered document defined in `schemas/markdown-rendering.md` → "Program & macrocycle rendering": a sub-cycle-grouped overview table → the **concrete window** (next ~1-2 weeks as full v0.1 workouts) → the **directional** remainder of the active sub-cycle (targets + progression, not sessions) → **outline** blocks for gated future sub-cycles → a prominent **Checkpoints / Next actions** list → a program-level gate/safety disclaimer. Author day-by-day sessions only for the concrete window, and never render a gated week span as if its date were certain.
 
 ### Output Format
 

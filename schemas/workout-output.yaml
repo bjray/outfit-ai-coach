@@ -123,6 +123,11 @@ program:
   duration_weeks: number            # planned span; for a gated plan, weeks past a gate are
                                     # estimates, not commitments (see `gate` below)
   periodization_model: string       # linear | undulating | block
+  concrete_window: string | null    # how far ahead day-by-day sessions are authored (e.g.
+                                    # "weeks 1-2"). Beyond it the active sub-cycle is directional
+                                    # (targets + progression_rules), and gated future sub-cycles
+                                    # are outline-only. Re-author the next window on check-in;
+                                    # default ~1-2 weeks.
   phases:
     - name: string                  # e.g., "Base", "Build", "Peak", "Deload"
       sub_cycle: string | null      # named sub-cycle/mesocycle this phase belongs to
@@ -146,7 +151,10 @@ program:
         rehab_phase: string | null  # acute | early-rehab | late-rehab | return-to-sport
         affected_weeks: string | null
         return_ramp: string | null
-  weeks:                            # per-week detail; outline phases may have no weeks here yet
+  weeks:                            # day-by-day sessions for the CONCRETE WINDOW only (e.g.
+                                    # weeks 1-2). Directional weeks past the window and outline
+                                    # (gated) phases carry no per-day sessions here — they live as
+                                    # phase targets + progression_rules until re-authored on check-in.
     - week_number: number
       phase: string
       sessions:
