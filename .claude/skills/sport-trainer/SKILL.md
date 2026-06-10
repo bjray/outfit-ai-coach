@@ -158,6 +158,52 @@ The event-driven structure below is the reference program-builder draws from whe
 
 In phase-spec mode, the spec's `goal`/`focus` still drives the session shape; this objective just narrows *which* movements and loads are eligible and how fast they ramp.
 
+## Vertical training & the incline treadmill
+
+For mountain athletes, vertical gain (ft) is the primary training currency — and when outdoor hiking is gated (`active_limitations`), the **incline treadmill is the primary vertical engine**, not a footnote. Treat it as a first-class session type and program it to a vertical target, not just a duration.
+
+### Translating vertical targets to a prescription
+
+Vertical gain rate depends on speed and grade:
+
+```
+vertical ft/hr ≈ speed (mph) × grade (%) × 52.8
+```
+
+(Assumes the treadmill displays horizontal-equivalent mph — the usual convention; at very steep grades the small-angle approximation drifts slightly, fine for training.)
+
+| Speed × grade | ft/hr | Time for 3,000 ft |
+|---|---|---|
+| 3.0 mph × 10% | ~1,580 | ~1h54 |
+| 3.0 mph × 12% | ~1,900 | ~1h35 |
+| 3.0 mph × 15% | ~2,380 | ~1h16 |
+| 2.5 mph × 15% | ~1,980 | ~1h31 |
+
+Use it both ways: size a session to a vertical target, or check a prescribed grade/speed/time hits the phase's weekly vertical.
+
+**Grade ceiling: 15%.** This treadmill caps at 15% — don't prescribe steeper. Long climbs are bought with **more time, not more grade** (a 4,500 ft peak ≈ ~1h54 at 3.0 mph × 15%).
+
+### Programming vertical
+
+- **Read the target from the phase spec** (e.g. `per_muscle_or_system: { target: "weekly vertical", weekly_feet: 6000 }`). Distribute across the week — typically a longer weekend climb + shorter midweek "rolling" sessions.
+- **Match the athlete's structure.** Weekday = rolling (~500–700 ft, moderate grade); weekend = the long sustained climb (per `active_limitations.scheduling`).
+- **Stay in the zone.** Base vertical is Zone 2 — set speed/grade so HR stays conversational and under AeT (requires the HR chest strap; see the protocol suggestion). If HR creeps, **drop speed before grade**.
+- **Ramp gradually.** ~10%/wk weekly vertical (program-builder owns the week-to-week mutation); don't spike total ascent.
+- **Pack weight only when cleared.** Until the pack `clearance_milestone` clears, run bodyweight (`load_caps`); add `worn_load` and ramp it only after sign-off — and never ramp pack and jump vertical in the same step.
+
+### In v0.1
+
+Express a treadmill climb as a duration-based exercise; put grade/speed in `equipment`, the vertical target in `notes`, and any pack in `worn_load`:
+
+```yaml
+- name: "Incline treadmill climb"
+  duration: 75
+  unit: min
+  intensity: "Zone 2"
+  equipment: "15% grade @ 3.0 mph"
+  notes: "Target ~3,000 ft vertical; conversational pace, hold under AeT. Bodyweight — no pack until PT-cleared."
+```
+
 ## Complementary Activity Integration
 
 When the user already does sport-specific sessions (e.g., "I climb 3x/week"):
