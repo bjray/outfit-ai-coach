@@ -4,6 +4,7 @@
 # Editor / IDE
 .vscode/
 .idea/
+.serena/
 *.swp
 *.swo
 *~
@@ -22,4 +23,5 @@ inbox/
 profiles/*
 !profiles/default.yaml
 programs/*
+fitness-data/
 

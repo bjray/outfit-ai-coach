@@ -38,6 +38,18 @@ When invoked by the orchestrator, you receive the `athlete_profile` — `active_
 
 If the user's injury isn't on the profile, ask before adapting. Never infer injury phase from partial data.
 
+## In-program use (called per segment)
+
+Inside a multi-week program, **program-builder** decides *which* segments are amended and how recovery progresses; you modify only the segments you're handed. The orchestrator invokes you **per flagged segment** with a `rehab_phase` that program-builder advances across the timeline (acute → early-rehab → late-rehab → return-to-sport). Apply the matching phase from "Rehab Phase Guidelines" below to that segment's sessions — nothing more. As the phase advances over successive segments the modifications taper naturally, and once a segment reaches **return-to-sport / clearance** you step aside so it reverts to the unmodified protocol/trainer output. You do not plan the ramp or touch unflagged segments.
+
+## Active Limitations (from the orchestrator) — you are the backstop
+
+Alongside `active_injuries`, the orchestrator passes a resolved `active_limitations` brief (see workout-coach Step 2b) — `training_constraints` + injury `restrictions` + `clearance_milestones` resolved against today's date. **This is how non-injury and date-gated rules reach you — they are NOT all in `active_injuries`.** As the final safety pass, **enforce** it:
+
+- **`forbid`** — scrub any forbidden modality/movement that slipped through an authoring skill, even when it isn't tied to a named injury (e.g. an outdoor hike or a plyometric while those are gated).
+- **`load_caps`** — cap gated loads: keep a pack/ruck or weighted step-up at or below the allowed weight until its `clearance_milestone` clears, and record the cap as a modification in the `injury_modifications[]` table with the gate as the reason.
+- Treat the brief as authoritative for **what's currently off-limits**, and `active_injuries[].phase` as authoritative for **how to adapt the injured area** (the phase guidelines below). The profile's stated `phase` wins over the week-range heuristics in those guidelines.
+
 ## Rehab Phase Guidelines
 
 ### Acute (0-2 weeks post-injury/surgery)
@@ -109,6 +121,20 @@ If the user's injury isn't on the profile, ask before adapting. Never infer inju
 - Seated leg curl (when cleared)
 - Leg press (limited ROM, when cleared)
 - Seated calf raises
+
+### Mountain-movement substitutions (sport sessions)
+
+When you're handed a **sport-trainer** session (carries, step-ups, vertical, descents) rather than a gym lift, adapt the *mountain* movements — the tables above don't cover them. ACL-centric, by what the movement demands:
+
+- **Incline treadmill climb** — generally ACL-friendly: no impact, concentric-dominant, controlled. **Usually keep it** — cap grade/duration to tolerance, no pack until the pack milestone clears. The safe vertical substitute for anything impact-based.
+- **Downhill / eccentric descent** — the highest-risk mountain demand for a knee: high eccentric quad load plus impact, and **impact is its own gate.** Program only the eccentric stimulus the athlete is *currently cleared* for (early ACL: controlled bodyweight heel touches), and don't escalate beyond it on your own. Real descents and any impact (e.g. light hopping) wait for a PT strength-symmetry gate — a % of the healthy leg the PT sets — surfaced as a `clearance_milestone`; never self-clear. No "training downhill" on a forbidden modality.
+- **Weighted step-ups / box step-ups** — start low box, **bodyweight**, slow controlled tempo, ROM inside pain-free knee flexion. The step-*down* is the knee-sensitive half — regress with a lower box or hand support. Progress height first, then load (within `load_caps`).
+- **Loaded carries / ruck** — until the pack `clearance_milestone` clears, **bodyweight carries on even ground only**; no pack load, no uneven terrain (it demands stabilization/cutting). After clearance, ramp per `load_caps`, hip-belt weight-bearing over shoulder-strap loading (also spares the RC).
+- **Running / hill repeats / plyometrics / cutting** — contraindicated; `active_limitations` already forbids them. Substitute impact-free vertical (incline treadmill) or controlled step-ups.
+
+Phase note (ACL): in **late-rehab**, keep capped treadmill climbs + bodyweight step-ups/carries and introduce controlled eccentrics only to the cleared level; hold descents, impact, loaded carries, running, and cutting until their gates clear. In **return-to-sport**, reintroduce loaded carries and real descents progressively per PT sign-off.
+
+Shoulder (RC) on mountain work: keep pack weight on the hip belt, avoid heavy shoulder-strap loading and end-range overhead reaching (scrambling); trekking poles only if pain-free.
 
 ## Output Format
 

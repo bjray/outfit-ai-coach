@@ -119,6 +119,21 @@ Interactive skill that walks you through creating your athlete profile. Asks a f
 
 Fresh-setup only — if you want to change a single field later, edit `profiles/<name>.yaml` directly, or re-run this skill to overwrite the whole file.
 
+### /garmin-training
+
+User-triggered ingestion of Garmin Connect data into local CSVs. The `training-context` agent reads those CSVs when designing workouts; this skill is the only thing in the project that calls the Garmin MCP directly.
+
+**Modes** (driven by trigger words): Snapshot, Rolling sync (14 days), CSV import (historical aggregates), Pre-workout context.
+
+```
+training status               # → Snapshot
+sync training data            # → Rolling sync
+import garmin year            # → CSV import
+pre-workout context           # → 5-line summary for downstream skills
+```
+
+Writes to `fitness-data/` (gitignored). Append-only — never auto-fires; the user triggers every refresh. Requires the Garmin Connect MCP server with the extensions in `setup/garmin-mcp-extensions.py` installed (see `setup/README.md`).
+
 ## Agents
 
 ### workout-coach
@@ -136,13 +151,15 @@ The agent:
 
 Pulls and analyzes your real training data to inform workout generation. Connects to:
 
-| Source | What it provides |
-|--------|-----------------|
-| Strava | Activities — runs, rides, hikes with HR, pace, distance, elevation |
-| Garmin Connect | Activities, sleep, HRV, resting HR, training status, body battery |
-| TrainingPeaks | Structured plans, TSS, CTL/ATL/TSB |
-| oneten | Strength sessions — exercises, sets, reps, weights |
-| Manual logs | Markdown/CSV training logs |
+| Source | How it's pulled | What it provides |
+|--------|-----------------|-----------------|
+| Strava | MCP (live, per invocation) | Activities — runs, rides, hikes with HR, pace, distance, elevation |
+| Garmin Connect | **`garmin-training` skill → `fitness-data/` CSVs** (user-triggered) | Activities, training status, VO2 max, readiness, HRV, sleep, RHR, weigh-ins, multi-year aggregates |
+| TrainingPeaks | MCP (live, per invocation) | Structured plans, TSS, CTL/ATL/TSB |
+| oneten | MCP (live, per invocation) | Strength sessions — exercises, sets, reps, weights |
+| Manual logs | Local files | Markdown/CSV training logs |
+
+Garmin sits behind the `garmin-training` skill rather than being pulled live each invocation. The skill writes CSVs the user owns on disk; `training-context` reads them. This keeps Garmin API traffic minimal (only when the user explicitly triggers a sync) and gives the workout pipeline access to multi-year historical aggregates the API would otherwise rate-limit.
 
 Produces:
 - **Recent activity summary** — what you've done in the last 7-14 days
@@ -207,7 +224,8 @@ workout-coach/
 │   │   ├── program-builder/SKILL.md
 │   │   ├── injury-adapter/SKILL.md
 │   │   ├── protocol-engine/SKILL.md
-│   │   └── profile-builder/SKILL.md
+│   │   ├── profile-builder/SKILL.md
+│   │   └── garmin-training/SKILL.md
 │   └── agents/
 │       ├── workout-coach/AGENT.md
 │       └── training-context/AGENT.md
@@ -225,6 +243,13 @@ workout-coach/
 │       ├── w1-day-a.md                 # one v0.1 workout per file
 │       ├── w1-day-b.md
 │       └── w1-day-c.md
+├── fitness-data/                       # user-specific Garmin CSVs (gitignored)
+│   ├── health-snapshot.md              # latest Snapshot
+│   ├── performance-stats.csv           # training status / VO2 / readiness time series
+│   ├── activity-effect.csv             # per-activity training effect
+│   ├── daily-summary.csv               # daily steps / RHR / intensity / kcal
+│   ├── period-summary.csv              # imported yearly aggregates
+│   └── imports/                        # drop user-exported Garmin Connect CSVs here
 ├── schemas/
 │   ├── workout-template-v0.1.md        # canonical workout spec
 │   ├── workout-output.yaml             # project extensions: program, metadata, injury_modifications
@@ -232,31 +257,45 @@ workout-coach/
 │   ├── programming-guidelines.md       # volume/time/exercise-count targets
 │   ├── athlete-profile.yaml            # profile schema
 │   └── training-context.yaml
+├── setup/
+│   ├── README.md                       # install guide for the MCP extensions
+│   └── garmin-mcp-extensions.py        # paste into the user's garmin-connect-mcp server
 └── README.md
 ```
 
-## Setup
+## Getting Started
 
-### 1. Navigate to the project
+### Prerequisites
+
+- [Claude Code](https://claude.com/claude-code) installed.
+- This repository cloned locally. Open the folder in Claude Code — it automatically discovers the skills in `.claude/skills/` and agents in `.claude/agents/`. There's no build or install step.
 
 ```bash
-cd workout-coach
+cd outfit-ai-coach
 ```
 
-Claude Code automatically discovers skills in `.claude/skills/` and agents in `.claude/agents/`.
+### 1. Create your athlete profile (start here)
+
+The profile is the **only required input** — it holds your experience, goals, body-part emphasis, session-time budget, equipment, and injuries, and it shapes every session the coach produces. Build it interactively:
+
+```
+/profile-builder
+```
+
+The skill asks a focused set of questions, explains the tradeoffs on each field, and writes `profiles/default.yaml`. Edit that file directly anytime, or create alternates (e.g. `/profile-builder rehab`). If you skip this step, the coach falls back to generic defaults.
 
 ### 2. Connect data sources (optional)
 
 Configure MCP servers for your training data sources. The training-context agent will use whatever is available:
 
 - **Strava** — via Strava MCP server
-- **Garmin Connect** — via Garmin MCP server
+- **Garmin Connect** — via Garmin MCP server + the five extensions in `setup/garmin-mcp-extensions.py`. See `setup/README.md` for install steps. The `garmin-training` skill writes to `fitness-data/`; the training-context agent reads those CSVs (it does **not** call Garmin live).
 - **TrainingPeaks** — via TrainingPeaks MCP server
 - **oneten** — your local MCP server
 
 If no MCP sources are configured, the system still works — it just won't have training history context.
 
-### 3. Use it
+### 3. Generate a workout or program
 
 **Quick workout:**
 ```

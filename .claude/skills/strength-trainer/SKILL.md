@@ -50,6 +50,18 @@ When invoked by the workout-coach orchestrator, you receive an `athlete_profile`
 
 If no profile is loaded, fall back to the defaults in guidelines §8 and **note the fallback in the output**.
 
+## Phase Spec mode (called by program-builder)
+
+When you're invoked as part of a multi-week program, the orchestrator hands you a **`phase_spec`** (produced by program-builder) alongside the `athlete_profile`. In this mode your job narrows: **author one representative session per scheduled day that hits the spec's targets — nothing more.** You do not decide periodization, phase order, week count, or progression; program-builder owns all of that.
+
+Read the phase spec like a scoped profile:
+- `goal`, `intensity_target`, `rep_range` → set your rep/rest/intensity (don't override with the profile's global goal)
+- `volume` + `per_muscle_or_system[*].weekly_sets` → hit these weekly set targets across the phase's `days_per_week`; distribute per `schemas/programming-guidelines.md`
+- `split` / `days_per_week` / `session_duration_minutes` → the session architecture and time budget
+- `rotation_note` → if it says to carry over compounds from the prior phase, keep those exact lifts and rotate only the accessories
+
+Produce a single representative session (or one per day in the split). Do **not** replicate it across weeks or add progression — program-builder mutates the dose week to week. If the spec's targets can't be met in the time budget, say so in `notes` rather than silently under-programming.
+
 ## Training Context (Optional)
 
 If a `training_context` is provided (from the training-context agent), layer it over the profile:
@@ -57,6 +69,17 @@ If a `training_context` is provided (from the training-context agent), layer it 
 - **Match fatigue:** Check `load_assessment.fatigue_status` — reduce intensity if fatigued
 - **Fill gaps:** Check `gap_analysis.undertrained_patterns` — prioritize neglected patterns
 - **Respect progression:** Check `progression.strength_trends` — use current working weights, not guesses
+
+## Active Limitations (from the orchestrator)
+
+The orchestrator passes an `active_limitations` brief — `training_constraints` + injury `restrictions` + `clearance_milestones`, already **resolved against today's date** into a flat list of what's off-limits right now (see workout-coach Step 2b). Honor it at **selection time**:
+
+- **`forbid`** — never select these modalities/movements (e.g. impact/plyometrics, loaded overhead end-range, deep knee flexion under load).
+- **`load_caps`** — keep gated loads at or below the cap; do **not** anchor to the athlete's old working weights when a cap applies.
+- **`modality_required`** — use these where the brief forces them.
+- **`scheduling`** — respect day placement.
+
+If a per-muscle target can't be hit within the limitations, say so rather than violating one. injury-adapter runs afterward as the safety backstop — but don't rely on it to catch a forbidden selection you could have avoided.
 
 ## Programming guidelines (canonical source)
 

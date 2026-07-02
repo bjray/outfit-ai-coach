@@ -8,6 +8,7 @@ training_context:
   # Who is asking — baseline info for the session
   athlete_summary:
     experience_level: string          # beginner | intermediate | advanced
+    primary_goal: string | null       # from profile goals.primary
     primary_sport: string | null      # e.g., trail-running, mountaineering
     active_injuries: string[]         # e.g., ["ACL rehab - early phase", "rotator cuff tear - functional"]
     equipment_available: string[]     # e.g., ["seated machines", "easy bands", "treadmill"]
@@ -68,6 +69,9 @@ training_context:
     readiness_score: number | null     # 0-100 if available from source (Garmin, etc.)
     resting_hr_trend: string | null    # stable | rising | falling
     hrv_trend: string | null           # stable | rising | falling
+    rehab_caveat: string | null        # if active_injuries include a rehab phase:
+                                       # how to read load given injury detraining —
+                                       # a high TSB may not mean "ready for intensity"
     recommendation: string             # e.g., "Ready for a hard session" or "Consider a recovery day"
 
   # Progression tracking
@@ -95,9 +99,14 @@ training_context:
     undertrained_patterns: string[]    # movement patterns not hit enough in recent window
     undertrained_muscles: string[]     # muscle groups below target frequency
     missing_energy_systems: string[]   # e.g., ["zone 2 - only 1 session this week, target is 3"]
+    goal_gaps: string[]                # capacity shortfalls vs the athlete's event
+                                       # targets (profile goals.event.targets), e.g.,
+                                       # ["longest hike 1,500 ft vs 4,500 ft/peak target"]
     overdue_deload: boolean            # true if load suggests a deload is needed
     staleness_risk: string[]           # areas where progression has stalled
-    recommendations: string[]          # actionable suggestions
+    recommendations: string[]          # actionable suggestions — must respect
+                                       # training_constraints and injury restrictions
+                                       # (never recommend a contraindicated modality)
 
   # Metadata
   metadata:
